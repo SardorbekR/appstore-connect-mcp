@@ -3,14 +3,9 @@
  */
 
 import type { AppStoreConnectClient } from "../api/client.js";
-import type { ASCListResponse, ASCResponse, BetaTesterInvitation, Build } from "../api/types.js";
+import type { ASCListResponse, ASCResponse, Build } from "../api/types.js";
 import { formatErrorResponse } from "../utils/errors.js";
-import {
-  getBuildInputSchema,
-  listBetaTesterInvitationsInputSchema,
-  listBuildsInputSchema,
-  validateInput,
-} from "../utils/validation.js";
+import { getBuildInputSchema, listBuildsInputSchema, validateInput } from "../utils/validation.js";
 
 /**
  * List all builds for an app
@@ -82,38 +77,6 @@ export async function getBuild(client: AppStoreConnectClient, input: unknown): P
 }
 
 /**
- * List beta tester invitations for a beta group
- */
-export async function listBetaTesterInvitations(
-  client: AppStoreConnectClient,
-  input: unknown
-): Promise<unknown> {
-  try {
-    const params = validateInput(listBetaTesterInvitationsInputSchema, input);
-
-    const response = await client.get<ASCListResponse<BetaTesterInvitation>>(
-      `/betaGroups/${params.betaGroupId}/betaTesterInvitations`,
-      {
-        limit: params.limit,
-      }
-    );
-
-    return {
-      success: true,
-      data: response.data.map((invitation) => ({
-        id: invitation.id,
-      })),
-      meta: {
-        total: response.meta?.paging?.total,
-        returned: response.data.length,
-      },
-    };
-  } catch (error) {
-    return formatErrorResponse(error);
-  }
-}
-
-/**
  * Tool definitions for builds
  */
 export const buildsToolDefinitions = [
@@ -149,26 +112,6 @@ export const buildsToolDefinitions = [
         },
       },
       required: ["buildId"],
-    },
-  },
-  {
-    name: "list_beta_tester_invitations",
-    description: "List pending beta tester invitations for a beta group.",
-    inputSchema: {
-      type: "object" as const,
-      properties: {
-        betaGroupId: {
-          type: "string",
-          description: "The beta group ID",
-        },
-        limit: {
-          type: "number",
-          description: "Maximum number of invitations to return (1-200)",
-          minimum: 1,
-          maximum: 200,
-        },
-      },
-      required: ["betaGroupId"],
     },
   },
 ];

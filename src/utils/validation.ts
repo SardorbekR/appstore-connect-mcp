@@ -12,16 +12,10 @@ export const appIdSchema = z
   .min(1, "App ID is required");
 
 // Version ID - numeric string
-export const versionIdSchema = z
-  .string()
-  .regex(/^\d+$/, "Version ID must be a numeric string")
-  .min(1, "Version ID is required");
+export const versionIdSchema = z.string().min(1, "Version ID is required");
 
-// Localization ID - numeric string
-export const localizationIdSchema = z
-  .string()
-  .regex(/^\d+$/, "Localization ID must be a numeric string")
-  .min(1, "Localization ID is required");
+// Localization ID
+export const localizationIdSchema = z.string().min(1, "Localization ID is required");
 
 // Build ID - numeric string (can be UUID format in some cases)
 export const buildIdSchema = z.string().min(1, "Build ID is required");

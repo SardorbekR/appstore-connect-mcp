@@ -19,12 +19,7 @@ import {
   listBetaTesters,
   removeBetaTester,
 } from "./beta.tools.js";
-import {
-  buildsToolDefinitions,
-  getBuild,
-  listBetaTesterInvitations,
-  listBuilds,
-} from "./builds.tools.js";
+import { buildsToolDefinitions, getBuild, listBuilds } from "./builds.tools.js";
 import {
   bundleIdsToolDefinitions,
   createBundleId,
@@ -117,7 +112,6 @@ const toolHandlers: Record<string, ToolHandler> = {
   // Builds
   list_builds: listBuilds,
   get_build: getBuild,
-  list_beta_tester_invitations: listBetaTesterInvitations,
 
   // Categories
   list_app_categories: listAppCategories,
