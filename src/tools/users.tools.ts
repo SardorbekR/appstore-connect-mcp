@@ -16,7 +16,7 @@ export async function listUsers(client: AppStoreConnectClient, input: unknown): 
 
     const queryParams: Record<string, string | number | boolean | undefined> = {
       limit: params.limit,
-      "fields[users]": "username,firstName,lastName,email,roles,allAppsVisible,provisioningAllowed",
+      "fields[users]": "username,firstName,lastName,roles,allAppsVisible,provisioningAllowed",
     };
 
     if (params.roles && params.roles.length > 0) {
@@ -32,7 +32,6 @@ export async function listUsers(client: AppStoreConnectClient, input: unknown): 
         username: user.attributes.username,
         firstName: user.attributes.firstName,
         lastName: user.attributes.lastName,
-        email: user.attributes.email,
         roles: user.attributes.roles,
         allAppsVisible: user.attributes.allAppsVisible,
         provisioningAllowed: user.attributes.provisioningAllowed,
@@ -55,7 +54,7 @@ export async function getUser(client: AppStoreConnectClient, input: unknown): Pr
     const params = validateInput(getUserInputSchema, input);
 
     const response = await client.get<ASCResponse<User>>(`/users/${params.userId}`, {
-      "fields[users]": "username,firstName,lastName,email,roles,allAppsVisible,provisioningAllowed",
+      "fields[users]": "username,firstName,lastName,roles,allAppsVisible,provisioningAllowed",
     });
 
     const user = response.data;
@@ -67,7 +66,6 @@ export async function getUser(client: AppStoreConnectClient, input: unknown): Pr
         username: user.attributes.username,
         firstName: user.attributes.firstName,
         lastName: user.attributes.lastName,
-        email: user.attributes.email,
         roles: user.attributes.roles,
         allAppsVisible: user.attributes.allAppsVisible,
         provisioningAllowed: user.attributes.provisioningAllowed,

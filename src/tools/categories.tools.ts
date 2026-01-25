@@ -153,22 +153,43 @@ export async function getAppAvailability(
     const params = validateInput(getAppAvailabilityInputSchema, input);
 
     const response = await client.get<ASCResponse<AppAvailability>>(
-      `/apps/${params.appId}/appAvailability`,
+      `/apps/${params.appId}/appAvailabilityV2`,
       {
-        include: "availableTerritories",
-        "fields[territories]": "currency",
+        include: "territoryAvailabilities",
+        "fields[territoryAvailabilities]": "available,preOrderEnabled,releaseDate",
       }
     );
 
     const availability = response.data;
-    const included = (response.included ?? []) as Territory[];
+    const included = response.included ?? [];
 
-    // Get territory details from included
-    const territories = included
-      .filter((item): item is Territory => item.type === "territories")
-      .map((territory) => ({
-        id: territory.id,
-        currency: territory.attributes.currency,
+    // Get territory availability details from included
+    interface TerritoryAvailability {
+      type: string;
+      id: string;
+      attributes: {
+        available: boolean;
+        preOrderEnabled?: boolean;
+        releaseDate?: string;
+      };
+      relationships?: {
+        territory?: {
+          data?: { id: string };
+        };
+      };
+    }
+
+    const territoryAvailabilities = included
+      .filter(
+        (item): item is TerritoryAvailability =>
+          (item as TerritoryAvailability).type === "territoryAvailabilities"
+      )
+      .filter((ta) => ta.attributes.available)
+      .map((ta) => ({
+        territoryId: ta.relationships?.territory?.data?.id ?? ta.id,
+        available: ta.attributes.available,
+        preOrderEnabled: ta.attributes.preOrderEnabled,
+        releaseDate: ta.attributes.releaseDate,
       }));
 
     return {
@@ -176,8 +197,8 @@ export async function getAppAvailability(
       data: {
         id: availability.id,
         availableInNewTerritories: availability.attributes.availableInNewTerritories,
-        territories,
-        territoryCount: territories.length,
+        territories: territoryAvailabilities,
+        territoryCount: territoryAvailabilities.length,
       },
     };
   } catch (error) {

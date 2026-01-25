@@ -168,17 +168,31 @@ describe("Category Tools", () => {
         },
         included: [
           {
-            id: "USA",
-            type: "territories",
+            id: "TA-USA",
+            type: "territoryAvailabilities",
             attributes: {
-              currency: "USD",
+              available: true,
+              preOrderEnabled: false,
+              releaseDate: "2024-01-01",
+            },
+            relationships: {
+              territory: {
+                data: { id: "USA" },
+              },
             },
           },
           {
-            id: "GBR",
-            type: "territories",
+            id: "TA-GBR",
+            type: "territoryAvailabilities",
             attributes: {
-              currency: "GBP",
+              available: true,
+              preOrderEnabled: true,
+              releaseDate: "2024-01-15",
+            },
+            relationships: {
+              territory: {
+                data: { id: "GBR" },
+              },
             },
           },
         ],
@@ -194,8 +208,18 @@ describe("Category Tools", () => {
           id: "AVAIL123",
           availableInNewTerritories: true,
           territories: [
-            { id: "USA", currency: "USD" },
-            { id: "GBR", currency: "GBP" },
+            {
+              territoryId: "USA",
+              available: true,
+              preOrderEnabled: false,
+              releaseDate: "2024-01-01",
+            },
+            {
+              territoryId: "GBR",
+              available: true,
+              preOrderEnabled: true,
+              releaseDate: "2024-01-15",
+            },
           ],
           territoryCount: 2,
         },
