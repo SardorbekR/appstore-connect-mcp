@@ -1,0 +1,65 @@
+{
+  "name": "asc-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Apple's App Store Connect API - manage iOS, macOS, tvOS, and visionOS apps with AI",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "asc-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "app-store-connect",
+    "apple",
+    "ios",
+    "macos",
+    "tvos",
+    "visionos",
+    "testflight",
+    "ai",
+    "llm"
+  ],
+  "author": "SardorbekR",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SardorbekR/appstore-connect-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SardorbekR/appstore-connect-mcp/issues"
+  },
+  "homepage": "https://github.com/SardorbekR/appstore-connect-mcp#readme",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "jose": "^5.2.0",
+    "undici": "^6.6.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.5.0",
+    "@types/node": "^20.11.0",
+    "tsup": "^8.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.2.0"
+  },
+  "files": [
+    "dist"
+  ]
+}
