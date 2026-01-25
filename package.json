@@ -1,6 +1,6 @@
 {
   "name": "asc-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP server for Apple's App Store Connect API - manage iOS, macOS, tvOS, and visionOS apps with AI",
   "type": "module",
   "main": "dist/index.js",
