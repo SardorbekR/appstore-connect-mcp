@@ -23,7 +23,6 @@ export async function listBuilds(client: AppStoreConnectClient, input: unknown):
       limit: params.limit,
       "fields[builds]":
         "version,uploadedDate,expirationDate,expired,minOsVersion,processingState,buildAudienceType,usesNonExemptEncryption",
-      sort: "-uploadedDate",
     });
 
     return {
@@ -120,7 +119,7 @@ export async function listBetaTesterInvitations(
 export const buildsToolDefinitions = [
   {
     name: "list_builds",
-    description: "List all builds for an app, sorted by upload date (newest first).",
+    description: "List all builds for an app.",
     inputSchema: {
       type: "object" as const,
       properties: {
