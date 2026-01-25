@@ -11,7 +11,7 @@ A Model Context Protocol (MCP) server for Apple's App Store Connect API. Manage 
 - **App Store Localizations** - Full CRUD for version descriptions, keywords, and what's new
 - **App Management** - List and inspect apps across all platforms
 - **Version Control** - Create and manage app store versions
-- **Beta Testing** - Manage TestFlight groups, testers, and invitations
+- **Beta Testing** - Manage TestFlight groups and testers
 - **Screenshot Management** - Upload and organize app screenshots
 - **Bundle ID Management** - Full CRUD for bundle identifiers
 - **Device Management** - List and inspect registered devices
@@ -268,7 +268,6 @@ For CI/CD or containerized environments, you can pass the key content directly:
 |------|-------------|------------|
 | `list_builds` | List builds for an app | `appId`, `limit?` |
 | `get_build` | Get build details | `buildId` |
-| `list_beta_tester_invitations` | List pending invitations | `betaGroupId`, `limit?` |
 
 ### Categories & Pricing
 

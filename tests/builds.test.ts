@@ -4,7 +4,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppStoreConnectClient } from "../src/api/client.js";
-import { getBuild, listBetaTesterInvitations, listBuilds } from "../src/tools/builds.tools.js";
+import { getBuild, listBuilds } from "../src/tools/builds.tools.js";
 
 // Create mock client
 const createMockClient = () => ({
@@ -140,49 +140,6 @@ describe("Build Tools", () => {
 
     it("should require buildId parameter", async () => {
       const result = await getBuild(mockClient as unknown as AppStoreConnectClient, {});
-
-      expect(result).toEqual({
-        success: false,
-        error: expect.objectContaining({
-          code: "VALIDATION_ERROR",
-        }),
-      });
-    });
-  });
-
-  describe("listBetaTesterInvitations", () => {
-    it("should return invitation list", async () => {
-      mockClient.get.mockResolvedValueOnce({
-        data: [
-          {
-            id: "INV123",
-            type: "betaTesterInvitations",
-          },
-          {
-            id: "INV456",
-            type: "betaTesterInvitations",
-          },
-        ],
-        meta: { paging: { total: 2 } },
-      });
-
-      const result = await listBetaTesterInvitations(
-        mockClient as unknown as AppStoreConnectClient,
-        { betaGroupId: "GROUP123" }
-      );
-
-      expect(result).toEqual({
-        success: true,
-        data: [{ id: "INV123" }, { id: "INV456" }],
-        meta: { total: 2, returned: 2 },
-      });
-    });
-
-    it("should require betaGroupId parameter", async () => {
-      const result = await listBetaTesterInvitations(
-        mockClient as unknown as AppStoreConnectClient,
-        {}
-      );
 
       expect(result).toEqual({
         success: false,
