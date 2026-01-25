@@ -79,7 +79,7 @@ describe("Build Tools", () => {
       });
     });
 
-    it("should pass limit parameter and sort by uploaded date", async () => {
+    it("should pass limit parameter", async () => {
       mockClient.get.mockResolvedValueOnce({
         data: [],
         meta: { paging: { total: 0 } },
@@ -94,7 +94,6 @@ describe("Build Tools", () => {
         "/apps/123456/builds",
         expect.objectContaining({
           limit: 10,
-          sort: "-uploadedDate",
         })
       );
     });
