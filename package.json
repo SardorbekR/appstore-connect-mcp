@@ -1,7 +1,7 @@
 {
   "name": "asc-mcp",
   "version": "1.0.3",
-  "mcpName": "io.github.sardorbekr/appstore-connect",
+  "mcpName": "io.github.SardorbekR/appstore-connect",
   "description": "MCP server for Apple's App Store Connect API - manage iOS, macOS, tvOS, and visionOS apps with AI",
   "type": "module",
   "main": "dist/index.js",
