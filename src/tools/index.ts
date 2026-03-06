@@ -44,6 +44,13 @@ import {
   updateVersionLocalization,
 } from "./localizations.tools.js";
 import {
+  getPricePointEqualizations,
+  listAppPricePoints,
+  listTerritories,
+  pricingToolDefinitions,
+  setAppPrices,
+} from "./pricing.tools.js";
+import {
   listScreenshotSets,
   listScreenshots,
   screenshotsToolDefinitions,
@@ -117,6 +124,12 @@ const toolHandlers: Record<string, ToolHandler> = {
   list_app_categories: listAppCategories,
   get_app_price_schedule: getAppPriceSchedule,
   get_app_availability: getAppAvailability,
+
+  // Pricing (PPP)
+  list_territories: listTerritories,
+  list_app_price_points: listAppPricePoints,
+  get_price_point_equalizations: getPricePointEqualizations,
+  set_app_prices: setAppPrices,
 };
 
 // All tool definitions
@@ -132,6 +145,7 @@ export const allToolDefinitions = [
   ...usersToolDefinitions,
   ...buildsToolDefinitions,
   ...categoriesToolDefinitions,
+  ...pricingToolDefinitions,
 ];
 
 /**

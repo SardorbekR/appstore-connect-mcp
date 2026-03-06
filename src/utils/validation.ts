@@ -394,3 +394,45 @@ export const getAppPriceScheduleInputSchema = z.object({
 export const getAppAvailabilityInputSchema = z.object({
   appId: appIdSchema,
 });
+
+// ============================================================================
+// Pricing Schemas
+// ============================================================================
+
+// Territory ID (3-letter code, e.g., "USA", "GBR", "JPN")
+export const territoryIdSchema = z
+  .string()
+  .regex(/^[A-Z]{3}$/, "Territory ID must be a 3-letter code (e.g., USA, GBR)");
+
+// List territories input
+export const listTerritoriesInputSchema = z.object({
+  limit: z.number().int().min(1).max(200).optional(),
+});
+
+// List app price points input
+export const listAppPricePointsInputSchema = z.object({
+  appId: appIdSchema,
+  territory: territoryIdSchema.optional(),
+  limit: z.number().int().min(1).max(200).optional(),
+});
+
+// Get price point equalizations input
+export const getPricePointEqualizationsInputSchema = z.object({
+  pricePointId: z.string().min(1, "Price Point ID is required"),
+  territories: z.array(territoryIdSchema).optional(),
+  limit: z.number().int().min(1).max(200).optional(),
+});
+
+// Set app prices input
+export const setAppPricesInputSchema = z.object({
+  appId: appIdSchema,
+  baseTerritory: territoryIdSchema,
+  manualPrices: z
+    .array(
+      z.object({
+        territory: territoryIdSchema,
+        pricePointId: z.string().min(1, "Price Point ID is required"),
+      })
+    )
+    .min(1, "At least one manual price entry is required"),
+});
