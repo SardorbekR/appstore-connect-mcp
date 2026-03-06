@@ -18,6 +18,7 @@ A Model Context Protocol (MCP) server for Apple's App Store Connect API. Manage 
 - **User Management** - List and inspect team users
 - **Build Management** - List and inspect app builds
 - **Category & Pricing** - Browse categories, check pricing and availability
+- **Pricing & PPP** - Set per-territory pricing with Purchase Power Parity support
 - **Secure by Default** - ES256 JWT auth with automatic token refresh, credential redaction in logs
 
 ## Table of Contents
@@ -277,6 +278,15 @@ For CI/CD or containerized environments, you can pass the key content directly:
 | `get_app_price_schedule` | Get app pricing info | `appId` |
 | `get_app_availability` | Get app territory availability | `appId` |
 
+### Pricing (PPP)
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `list_territories` | List all territories with currencies | `limit?` |
+| `list_app_price_points` | List available price tiers for an app | `appId`, `territory?`, `limit?` |
+| `get_price_point_equalizations` | Get PPP equivalent prices across countries | `pricePointId`, `territories?`, `limit?` |
+| `set_app_prices` | Set per-territory manual pricing (replaces entire schedule) | `appId`, `baseTerritory`, `manualPrices` |
+
 ## Usage Examples
 
 ### List Your Apps
@@ -308,6 +318,19 @@ Claude will use `create_version_localization` with locale `ja`.
 Claude will:
 1. Find the app and beta group using `list_beta_groups`
 2. Add the tester using `add_beta_tester`
+
+### Set PPP Pricing
+
+> "Show me the equivalent prices for my $9.99 tier in India, Brazil, and Turkey"
+
+Claude will:
+1. Find the $9.99 price point using `list_app_price_points`
+2. Get equivalent prices using `get_price_point_equalizations`
+3. Show you the PPP-adjusted prices in each territory
+
+> "Set my app to $9.99 in the US and use PPP pricing for India and Brazil"
+
+Claude will use `set_app_prices` with the appropriate price point IDs for each territory.
 
 ### Check Version Status
 
