@@ -730,6 +730,51 @@ export interface Territory {
 }
 
 // ============================================================================
+// App Price Point Resources
+// ============================================================================
+
+export interface AppPricePointAttributes {
+  customerPrice: string;
+  proceeds: string;
+}
+
+export interface AppPricePointRelationships {
+  app?: Relationship<"apps">;
+  territory?: Relationship<"territories">;
+  equalizations?: Relationship<"appPricePoints">;
+}
+
+export interface AppPricePoint {
+  type: "appPricePoints";
+  id: string;
+  attributes: AppPricePointAttributes;
+  relationships?: AppPricePointRelationships;
+  links?: ResourceLinks;
+}
+
+// ============================================================================
+// App Price Resources (for price schedule entries)
+// ============================================================================
+
+export interface AppPriceAttributes {
+  startDate?: string | null;
+  endDate?: string | null;
+}
+
+export interface AppPriceRelationships {
+  appPricePoint?: Relationship<"appPricePoints">;
+  territory?: Relationship<"territories">;
+}
+
+export interface AppPrice {
+  type: "appPrices";
+  id: string;
+  attributes?: AppPriceAttributes;
+  relationships?: AppPriceRelationships;
+  links?: ResourceLinks;
+}
+
+// ============================================================================
 // App Availability Resources
 // ============================================================================
 
@@ -771,5 +816,50 @@ export interface RemoveBetaTestersRequest {
   data: Array<{
     type: "betaTesters";
     id: string;
+  }>;
+}
+
+// ============================================================================
+// App Price Schedule Request Body
+// ============================================================================
+
+export interface CreateAppPriceScheduleRequest {
+  data: {
+    type: "appPriceSchedules";
+    relationships: {
+      app: {
+        data: {
+          type: "apps";
+          id: string;
+        };
+      };
+      baseTerritory: {
+        data: {
+          type: "territories";
+          id: string;
+        };
+      };
+      manualPrices: {
+        data: Array<{
+          type: "appPrices";
+          id: string;
+        }>;
+      };
+    };
+  };
+  included: Array<{
+    type: "appPrices";
+    id: string;
+    attributes: {
+      startDate: string | null;
+    };
+    relationships: {
+      appPricePoint: {
+        data: {
+          type: "appPricePoints";
+          id: string;
+        };
+      };
+    };
   }>;
 }

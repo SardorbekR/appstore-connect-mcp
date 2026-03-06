@@ -260,7 +260,13 @@ export class AppStoreConnectClient {
     path: string,
     params?: Record<string, string | number | boolean | undefined>
   ): string {
-    const url = new URL(path.startsWith("/") ? path.slice(1) : path, `${this.baseUrl}/`);
+    // Handle paths with explicit API version (e.g., /v3/...) by resolving against domain root
+    let baseUrl = this.baseUrl;
+    if (/^\/v\d+\//.test(path)) {
+      baseUrl = this.baseUrl.replace(/\/v\d+$/, "");
+    }
+
+    const url = new URL(path.startsWith("/") ? path.slice(1) : path, `${baseUrl}/`);
 
     if (params) {
       for (const [key, value] of Object.entries(params)) {
