@@ -201,6 +201,7 @@ export const bundleIdsToolDefinitions = [
   {
     name: "list_bundle_ids",
     description: "List all bundle IDs registered in App Store Connect. Can filter by platform.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -222,6 +223,7 @@ export const bundleIdsToolDefinitions = [
   {
     name: "get_bundle_id",
     description: "Get details of a specific bundle ID.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -237,6 +239,7 @@ export const bundleIdsToolDefinitions = [
     name: "create_bundle_id",
     description:
       "Register a new bundle ID in App Store Connect. The identifier must be unique and follow reverse-domain notation (e.g., com.example.app).",
+    annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -260,6 +263,7 @@ export const bundleIdsToolDefinitions = [
   {
     name: "update_bundle_id",
     description: "Update a bundle ID's name. Note: The identifier cannot be changed.",
+    annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -279,6 +283,7 @@ export const bundleIdsToolDefinitions = [
     name: "delete_bundle_id",
     description:
       "Delete a bundle ID. Note: This cannot be undone and may affect apps using this bundle ID.",
+    annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object" as const,
       properties: {

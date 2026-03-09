@@ -78,6 +78,7 @@ export const appsToolDefinitions = [
     name: "list_apps",
     description:
       "List all apps in your App Store Connect account. Returns app IDs, names, bundle IDs, and SKUs.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -93,6 +94,7 @@ export const appsToolDefinitions = [
   {
     name: "get_app",
     description: "Get detailed information about a specific app by its ID.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {

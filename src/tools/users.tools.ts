@@ -83,6 +83,7 @@ export const usersToolDefinitions = [
   {
     name: "list_users",
     description: "List all users in your App Store Connect team. Can filter by roles.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -118,6 +119,7 @@ export const usersToolDefinitions = [
   {
     name: "get_user",
     description: "Get details of a specific team user.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
