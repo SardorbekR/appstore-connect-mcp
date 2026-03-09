@@ -170,6 +170,7 @@ export const versionsToolDefinitions = [
     name: "list_app_versions",
     description:
       "List all App Store versions for an app. Can filter by platform and version state.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -199,6 +200,7 @@ export const versionsToolDefinitions = [
   {
     name: "get_app_version",
     description: "Get detailed information about a specific app version.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -213,6 +215,7 @@ export const versionsToolDefinitions = [
   {
     name: "create_app_version",
     description: "Create a new App Store version for an app.",
+    annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object" as const,
       properties: {

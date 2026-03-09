@@ -195,6 +195,7 @@ export const betaToolDefinitions = [
     name: "list_beta_groups",
     description:
       "List all beta groups for an app. Returns group names, public link info, and settings.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -215,6 +216,7 @@ export const betaToolDefinitions = [
   {
     name: "list_beta_testers",
     description: "List all beta testers in a specific beta group.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -235,6 +237,7 @@ export const betaToolDefinitions = [
   {
     name: "add_beta_tester",
     description: "Add a new beta tester to a beta group by email address.",
+    annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -261,6 +264,7 @@ export const betaToolDefinitions = [
   {
     name: "remove_beta_tester",
     description: "Remove a beta tester from a beta group.",
+    annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object" as const,
       properties: {

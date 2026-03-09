@@ -225,6 +225,7 @@ export const screenshotsToolDefinitions = [
     name: "list_screenshot_sets",
     description:
       "List all screenshot sets for a version localization. Each set represents a different display type (device size).",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -245,6 +246,7 @@ export const screenshotsToolDefinitions = [
   {
     name: "list_screenshots",
     description: "List all screenshots in a screenshot set.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -266,6 +268,7 @@ export const screenshotsToolDefinitions = [
     name: "upload_screenshot",
     description:
       "Upload a new screenshot to a screenshot set. Provide the local file path, and this tool will handle the multi-step upload process.",
+    annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object" as const,
       properties: {
