@@ -863,3 +863,451 @@ export interface CreateAppPriceScheduleRequest {
     };
   }>;
 }
+
+// ============================================================================
+// Subscription Resources
+// ============================================================================
+
+export type SubscriptionState =
+  | "MISSING_METADATA"
+  | "READY_TO_SUBMIT"
+  | "WAITING_FOR_REVIEW"
+  | "IN_REVIEW"
+  | "DEVELOPER_ACTION_NEEDED"
+  | "PENDING_BINARY_APPROVAL"
+  | "APPROVED"
+  | "DEVELOPER_REMOVED_FROM_SALE"
+  | "REMOVED_FROM_SALE"
+  | "REJECTED";
+
+export type SubscriptionPeriod =
+  | "ONE_WEEK"
+  | "ONE_MONTH"
+  | "TWO_MONTHS"
+  | "THREE_MONTHS"
+  | "SIX_MONTHS"
+  | "ONE_YEAR";
+
+export interface SubscriptionGroupAttributes {
+  referenceName: string;
+}
+
+export interface SubscriptionGroupRelationships {
+  app?: Relationship<"apps">;
+  subscriptions?: Relationship<"subscriptions">;
+  subscriptionGroupLocalizations?: Relationship<"subscriptionGroupLocalizations">;
+}
+
+export interface SubscriptionGroup {
+  type: "subscriptionGroups";
+  id: string;
+  attributes: SubscriptionGroupAttributes;
+  relationships?: SubscriptionGroupRelationships;
+  links: ResourceLinks;
+}
+
+export interface SubscriptionAttributes {
+  name: string;
+  productId: string;
+  familySharable?: boolean;
+  state?: SubscriptionState;
+  subscriptionPeriod?: SubscriptionPeriod;
+  reviewNote?: string;
+  groupLevel?: number;
+}
+
+export interface SubscriptionRelationships {
+  subscriptionGroup?: Relationship<"subscriptionGroups">;
+  subscriptionLocalizations?: Relationship<"subscriptionLocalizations">;
+  appStoreReviewScreenshot?: Relationship<"subscriptionAppStoreReviewScreenshots">;
+  pricePoints?: Relationship<"subscriptionPricePoints">;
+  prices?: Relationship<"subscriptionPrices">;
+  introductoryOffers?: Relationship<"subscriptionIntroductoryOffers">;
+  promotionalOffers?: Relationship<"subscriptionPromotionalOffers">;
+}
+
+export interface Subscription {
+  type: "subscriptions";
+  id: string;
+  attributes: SubscriptionAttributes;
+  relationships?: SubscriptionRelationships;
+  links: ResourceLinks;
+}
+
+export interface SubscriptionLocalizationAttributes {
+  name?: string;
+  locale?: string;
+  description?: string;
+  state?: string;
+}
+
+export interface SubscriptionLocalizationRelationships {
+  subscription?: Relationship<"subscriptions">;
+}
+
+export interface SubscriptionLocalization {
+  type: "subscriptionLocalizations";
+  id: string;
+  attributes: SubscriptionLocalizationAttributes;
+  relationships?: SubscriptionLocalizationRelationships;
+  links: ResourceLinks;
+}
+
+export interface SubscriptionPricePointAttributes {
+  customerPrice?: string;
+  proceeds?: string;
+  proceedsYear2?: string;
+}
+
+export interface SubscriptionPricePointRelationships {
+  subscription?: Relationship<"subscriptions">;
+  territory?: Relationship<"territories">;
+  equalizations?: Relationship<"subscriptionPricePoints">;
+}
+
+export interface SubscriptionPricePoint {
+  type: "subscriptionPricePoints";
+  id: string;
+  attributes: SubscriptionPricePointAttributes;
+  relationships?: SubscriptionPricePointRelationships;
+  links?: ResourceLinks;
+}
+
+// Request types
+export interface UpdateSubscriptionGroupRequest {
+  data: {
+    type: "subscriptionGroups";
+    id: string;
+    attributes: {
+      referenceName: string;
+    };
+  };
+}
+
+export interface SubscriptionGroupLocalizationAttributes {
+  name?: string;
+  locale?: string;
+  customAppName?: string;
+  customAppDescription?: string;
+  state?: string;
+}
+
+export interface SubscriptionGroupLocalizationRelationships {
+  subscriptionGroup?: Relationship<"subscriptionGroups">;
+}
+
+export interface SubscriptionGroupLocalization {
+  type: "subscriptionGroupLocalizations";
+  id: string;
+  attributes: SubscriptionGroupLocalizationAttributes;
+  relationships?: SubscriptionGroupLocalizationRelationships;
+  links: ResourceLinks;
+}
+
+export interface CreateSubscriptionGroupLocalizationRequest {
+  data: {
+    type: "subscriptionGroupLocalizations";
+    attributes: {
+      name: string;
+      locale: string;
+      customAppName?: string;
+      customAppDescription?: string;
+    };
+    relationships: {
+      subscriptionGroup: {
+        data: {
+          type: "subscriptionGroups";
+          id: string;
+        };
+      };
+    };
+  };
+}
+
+export interface UpdateSubscriptionGroupLocalizationRequest {
+  data: {
+    type: "subscriptionGroupLocalizations";
+    id: string;
+    attributes: {
+      name?: string;
+      customAppName?: string;
+      customAppDescription?: string;
+    };
+  };
+}
+
+export interface CreateSubscriptionGroupRequest {
+  data: {
+    type: "subscriptionGroups";
+    attributes: {
+      referenceName: string;
+    };
+    relationships: {
+      app: {
+        data: {
+          type: "apps";
+          id: string;
+        };
+      };
+    };
+  };
+}
+
+export interface CreateSubscriptionRequest {
+  data: {
+    type: "subscriptions";
+    attributes: {
+      name: string;
+      productId: string;
+      familySharable?: boolean;
+      subscriptionPeriod: SubscriptionPeriod;
+      reviewNote?: string;
+      groupLevel?: number;
+    };
+    relationships: {
+      group: {
+        data: {
+          type: "subscriptionGroups";
+          id: string;
+        };
+      };
+    };
+  };
+}
+
+export interface UpdateSubscriptionRequest {
+  data: {
+    type: "subscriptions";
+    id: string;
+    attributes: {
+      name?: string;
+      familySharable?: boolean;
+      subscriptionPeriod?: SubscriptionPeriod;
+      reviewNote?: string;
+      groupLevel?: number;
+    };
+  };
+}
+
+export interface CreateSubscriptionLocalizationRequest {
+  data: {
+    type: "subscriptionLocalizations";
+    attributes: {
+      name: string;
+      locale: string;
+      description?: string;
+    };
+    relationships: {
+      subscription: {
+        data: {
+          type: "subscriptions";
+          id: string;
+        };
+      };
+    };
+  };
+}
+
+export interface UpdateSubscriptionLocalizationRequest {
+  data: {
+    type: "subscriptionLocalizations";
+    id: string;
+    attributes: {
+      name?: string;
+      description?: string;
+    };
+  };
+}
+
+export interface CreateSubscriptionAvailabilityRequest {
+  data: {
+    type: "subscriptionAvailabilities";
+    attributes: {
+      availableInNewTerritories: boolean;
+    };
+    relationships: {
+      subscription: {
+        data: {
+          type: "subscriptions";
+          id: string;
+        };
+      };
+      availableTerritories?: {
+        data: Array<{
+          type: "territories";
+          id: string;
+        }>;
+      };
+    };
+  };
+}
+
+export interface SubscriptionAvailabilityAttributes {
+  availableInNewTerritories: boolean;
+}
+
+export interface SubscriptionAvailabilityRelationships {
+  subscription?: Relationship<"subscriptions">;
+  availableTerritories?: Relationship<"territories">;
+}
+
+export interface SubscriptionAvailability {
+  type: "subscriptionAvailabilities";
+  id: string;
+  attributes: SubscriptionAvailabilityAttributes;
+  relationships?: SubscriptionAvailabilityRelationships;
+  links: ResourceLinks;
+}
+
+export interface CreateSubscriptionPriceRequest {
+  data: {
+    type: "subscriptionPrices";
+    attributes: {
+      startDate?: string | null;
+      preserveCurrentPrice: boolean;
+    };
+    relationships: {
+      subscription: {
+        data: {
+          type: "subscriptions";
+          id: string;
+        };
+      };
+      subscriptionPricePoint: {
+        data: {
+          type: "subscriptionPricePoints";
+          id: string;
+        };
+      };
+    };
+  };
+}
+
+export interface SubscriptionPriceAttributes {
+  startDate?: string | null;
+  preserveCurrentPrice?: boolean;
+}
+
+export interface SubscriptionPriceRelationships {
+  subscription?: Relationship<"subscriptions">;
+  subscriptionPricePoint?: Relationship<"subscriptionPricePoints">;
+  territory?: Relationship<"territories">;
+}
+
+export interface SubscriptionPrice {
+  type: "subscriptionPrices";
+  id: string;
+  attributes?: SubscriptionPriceAttributes;
+  relationships?: SubscriptionPriceRelationships;
+  links?: ResourceLinks;
+}
+
+export type SubscriptionOfferDuration =
+  | "THREE_DAYS"
+  | "ONE_WEEK"
+  | "TWO_WEEKS"
+  | "ONE_MONTH"
+  | "TWO_MONTHS"
+  | "THREE_MONTHS"
+  | "SIX_MONTHS"
+  | "ONE_YEAR";
+
+export type SubscriptionOfferMode = "FREE_TRIAL" | "PAY_AS_YOU_GO" | "PAY_UP_FRONT";
+
+export interface SubscriptionPromotionalOfferAttributes {
+  name?: string;
+  offerCode?: string;
+  duration?: SubscriptionOfferDuration;
+  offerMode?: SubscriptionOfferMode;
+  periodCount?: number;
+}
+
+export interface SubscriptionPromotionalOfferRelationships {
+  subscription?: Relationship<"subscriptions">;
+  prices?: Relationship<"subscriptionPromotionalOfferPrices">;
+}
+
+export interface SubscriptionPromotionalOffer {
+  type: "subscriptionPromotionalOffers";
+  id: string;
+  attributes: SubscriptionPromotionalOfferAttributes;
+  relationships?: SubscriptionPromotionalOfferRelationships;
+  links: ResourceLinks;
+}
+
+export interface SubscriptionPromotionalOfferPriceRelationships {
+  subscriptionPricePoint?: Relationship<"subscriptionPricePoints">;
+  territory?: Relationship<"territories">;
+}
+
+export interface SubscriptionPromotionalOfferPrice {
+  type: "subscriptionPromotionalOfferPrices";
+  id: string;
+  attributes?: Record<string, never>;
+  relationships?: SubscriptionPromotionalOfferPriceRelationships;
+  links?: ResourceLinks;
+}
+
+export interface CreateSubscriptionPromotionalOfferRequest {
+  data: {
+    type: "subscriptionPromotionalOffers";
+    attributes: {
+      name: string;
+      offerCode: string;
+      duration: SubscriptionOfferDuration;
+      offerMode: SubscriptionOfferMode;
+      numberOfPeriods?: number;
+    };
+    relationships: {
+      subscription: {
+        data: { type: "subscriptions"; id: string };
+      };
+      prices: {
+        data: Array<{ type: "subscriptionPromotionalOfferPrices"; id: string }>;
+      };
+    };
+  };
+  included?: Array<{
+    type: "subscriptionPromotionalOfferPrices";
+    id: string;
+    attributes: Record<string, never>;
+    relationships: {
+      subscriptionPricePoint: { data: { type: "subscriptionPricePoints"; id: string } };
+      territory: { data: { type: "territories"; id: string } };
+    };
+  }>;
+}
+
+export interface UpdateSubscriptionPromotionalOfferRequest {
+  data: {
+    type: "subscriptionPromotionalOffers";
+    id: string;
+    attributes: {
+      name?: string;
+      offerCode?: string;
+      duration?: SubscriptionOfferDuration;
+      offerMode?: SubscriptionOfferMode;
+      numberOfPeriods?: number;
+    };
+    relationships?: {
+      prices: {
+        data: Array<{ type: "subscriptionPromotionalOfferPrices"; id: string }>;
+      };
+    };
+  };
+  included?: Array<{
+    type: "subscriptionPromotionalOfferPrices";
+    id: string;
+    attributes: Record<string, never>;
+    relationships: {
+      subscriptionPricePoint: { data: { type: "subscriptionPricePoints"; id: string } };
+      territory: { data: { type: "territories"; id: string } };
+    };
+  }>;
+}
+
+export interface GetSubscriptionAvailabilityResponse {
+  data: SubscriptionAvailability;
+  included?: unknown[];
+  links?: ResourceLinks;
+}

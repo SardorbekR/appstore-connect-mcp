@@ -251,6 +251,7 @@ export const pricingToolDefinitions = [
     name: "list_territories",
     description:
       "List all App Store territories (countries/regions) with their currencies. Useful for understanding which markets are available for pricing.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -268,6 +269,7 @@ export const pricingToolDefinitions = [
     name: "list_app_price_points",
     description:
       "List available price points for an app. Each price point represents a possible price tier showing customer price and developer proceeds in local currency. Filter by territory to see prices for a specific country.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -293,6 +295,7 @@ export const pricingToolDefinitions = [
     name: "get_price_point_equalizations",
     description:
       "Get Apple's equivalent price points in other territories for a given price point. This is the core Purchase Power Parity (PPP) data — shows what Apple considers equivalent pricing across countries. Use list_app_price_points first to get a price point ID.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -320,6 +323,7 @@ export const pricingToolDefinitions = [
     name: "set_app_prices",
     description:
       "Set per-territory manual pricing for an app (Purchase Power Parity). WARNING: This replaces the entire price schedule — include ALL territory prices, not just changes. The base territory price must be included in manualPrices. Use list_app_price_points and get_price_point_equalizations to find price point IDs first.",
+    annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object" as const,
       properties: {
