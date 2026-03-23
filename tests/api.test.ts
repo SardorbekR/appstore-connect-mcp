@@ -232,6 +232,164 @@ describe("AppStoreConnectClient", () => {
     });
   });
 
+  describe("requestRaw", () => {
+    beforeEach(() => {
+      // Re-set getToken mock since vi.resetAllMocks() in afterEach clears it
+      (mockTokenManager.getToken as ReturnType<typeof vi.fn>).mockResolvedValue("mock-token");
+    });
+
+    it("should include authorization header", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        arrayBuffer: async () => new ArrayBuffer(0),
+      });
+
+      await client.requestRaw("/salesReports");
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining("/salesReports"),
+        expect.objectContaining({
+          method: "GET",
+          headers: expect.objectContaining({
+            Authorization: "Bearer mock-token",
+          }),
+        })
+      );
+    });
+
+    it("should merge custom headers with auth header", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({}),
+      });
+
+      await client.requestRaw("/apps/123/perfPowerMetrics", {
+        headers: {
+          Accept: "application/vnd.apple.xcode-metrics+json,application/json",
+        },
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: "Bearer mock-token",
+            Accept: "application/vnd.apple.xcode-metrics+json,application/json",
+          }),
+        })
+      );
+    });
+
+    it("should return raw Response on success", async () => {
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        arrayBuffer: async () => new ArrayBuffer(10),
+      };
+      mockFetch.mockResolvedValueOnce(mockResponse);
+
+      const result = await client.requestRaw("/salesReports", { params: { "filter[vendorNumber]": "123" } });
+
+      expect(result).toBe(mockResponse);
+    });
+
+    it("should return Response as-is on 204", async () => {
+      const mockResponse = { ok: true, status: 204 };
+      mockFetch.mockResolvedValueOnce(mockResponse);
+
+      const result = await client.requestRaw("/resource");
+
+      expect(result.status).toBe(204);
+    });
+
+    it("should throw ASCError with parsed JSON body on non-ok response", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        json: async () => ({
+          errors: [{ code: "NOT_FOUND", title: "Not Found", detail: "Resource not found" }],
+        }),
+      });
+
+      await expect(client.requestRaw("/missing")).rejects.toThrow(ASCError);
+    });
+
+    it("should throw generic ASCError when error body is not JSON", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: "Internal Server Error",
+        json: async () => {
+          throw new Error("not json");
+        },
+      });
+
+      // Will retry 3 times, all fail with 500
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: "Internal Server Error",
+        json: async () => {
+          throw new Error("not json");
+        },
+      });
+
+      await expect(client.requestRaw("/broken")).rejects.toThrow(ASCError);
+    });
+
+    it("should retry on 5xx errors", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 502,
+        statusText: "Bad Gateway",
+        json: async () => {
+          throw new Error("not json");
+        },
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        arrayBuffer: async () => new ArrayBuffer(0),
+      });
+
+      const result = await client.requestRaw("/reports");
+      expect(result.status).toBe(200);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it("should not retry on 4xx errors except 429", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: async () => ({
+          errors: [{ code: "INVALID_REQUEST", title: "Bad Request" }],
+        }),
+      });
+
+      await expect(client.requestRaw("/bad")).rejects.toThrow(ASCError);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("should append query parameters to URL", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        arrayBuffer: async () => new ArrayBuffer(0),
+      });
+
+      await client.requestRaw("/salesReports", {
+        params: { "filter[vendorNumber]": "12345", "filter[reportType]": "SALES" },
+      });
+
+      const calledUrl = mockFetch.mock.calls[0][0] as string;
+      expect(calledUrl).toContain("filter%5BvendorNumber%5D=12345");
+      expect(calledUrl).toContain("filter%5BreportType%5D=SALES");
+    });
+  });
+
   describe("paginate", () => {
     it("should yield items from all pages", async () => {
       // First page

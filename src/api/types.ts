@@ -820,6 +820,171 @@ export interface RemoveBetaTestersRequest {
 }
 
 // ============================================================================
+// Analytics Report Resources
+// ============================================================================
+
+export type AnalyticsReportAccessType = "ONGOING" | "ONE_TIME_SNAPSHOT";
+
+export type AnalyticsReportCategory =
+  | "APP_STORE_ENGAGEMENT"
+  | "COMMERCE"
+  | "APP_USAGE"
+  | "FRAMEWORKS_USAGE"
+  | "PERFORMANCE";
+
+export type AnalyticsReportGranularity = "DAILY" | "WEEKLY" | "MONTHLY";
+
+export interface AnalyticsReportRequestAttributes {
+  accessType: AnalyticsReportAccessType;
+  stoppedDueToInactivity: boolean;
+}
+
+export interface AnalyticsReportRequest {
+  type: "analyticsReportRequests";
+  id: string;
+  attributes: AnalyticsReportRequestAttributes;
+  links: ResourceLinks;
+}
+
+export interface CreateAnalyticsReportRequestBody {
+  data: {
+    type: "analyticsReportRequests";
+    attributes: {
+      accessType: AnalyticsReportAccessType;
+    };
+    relationships: {
+      app: {
+        data: {
+          type: "apps";
+          id: string;
+        };
+      };
+    };
+  };
+}
+
+export interface AnalyticsReportAttributes {
+  category: AnalyticsReportCategory;
+  name: string;
+}
+
+export interface AnalyticsReport {
+  type: "analyticsReports";
+  id: string;
+  attributes: AnalyticsReportAttributes;
+  links: ResourceLinks;
+}
+
+export interface AnalyticsReportInstanceAttributes {
+  granularity: AnalyticsReportGranularity;
+  processingDate: string;
+}
+
+export interface AnalyticsReportInstance {
+  type: "analyticsReportInstances";
+  id: string;
+  attributes: AnalyticsReportInstanceAttributes;
+  links: ResourceLinks;
+}
+
+export interface AnalyticsReportSegmentAttributes {
+  checksum: string;
+  sizeInBytes: number;
+  url: string;
+}
+
+export interface AnalyticsReportSegment {
+  type: "analyticsReportSegments";
+  id: string;
+  attributes: AnalyticsReportSegmentAttributes;
+  links: ResourceLinks;
+}
+
+// ============================================================================
+// Sales & Finance Report Types
+// ============================================================================
+
+export type SalesReportType =
+  | "SALES"
+  | "SUBSCRIPTION"
+  | "SUBSCRIPTION_EVENT"
+  | "SUBSCRIBER"
+  | "PRE_ORDER";
+
+export type SalesReportSubType = "SUMMARY" | "DETAILED" | "OPT_IN";
+
+export type ReportFrequency = "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY";
+
+export type FinanceReportType = "FINANCIAL" | "FINANCE_DETAIL";
+
+// ============================================================================
+// Performance & Diagnostics Resources
+// ============================================================================
+
+export type PerfMetricType =
+  | "DISK"
+  | "HANG"
+  | "BATTERY"
+  | "LAUNCH"
+  | "MEMORY"
+  | "ANIMATION"
+  | "TERMINATION";
+
+export type DiagnosticSignatureType = "DISK_WRITES" | "HANGS" | "LAUNCHES";
+
+export interface XcodeMetricsPayload {
+  productData: Array<{
+    metricCategories: MetricCategory[];
+    platform: string;
+    appVersion: string;
+  }>;
+}
+
+export interface MetricCategory {
+  identifier: string;
+  metrics: Array<{
+    identifier: string;
+    unit: { identifier: string; displayName: string };
+    datasets: Array<{
+      filterCriteria: {
+        percentile: string;
+        device: string;
+        deviceMarketingName: string;
+      };
+      points: Array<{
+        version: string;
+        value: number;
+        percentageBreakdown?: Record<string, number>;
+      }>;
+    }>;
+  }>;
+}
+
+export interface DiagnosticSignatureAttributes {
+  diagnosticType: DiagnosticSignatureType;
+  signature: string;
+  weight: number;
+}
+
+export interface DiagnosticSignature {
+  type: "diagnosticSignatures";
+  id: string;
+  attributes: DiagnosticSignatureAttributes;
+  links: ResourceLinks;
+}
+
+export interface DiagnosticLogAttributes {
+  diagnosticType: DiagnosticSignatureType;
+}
+
+export interface DiagnosticLog {
+  type: "diagnosticLogs";
+  id: string;
+  attributes: DiagnosticLogAttributes;
+  links: ResourceLinks;
+}
+
+// ============================================================================
 // App Price Schedule Request Body
 // ============================================================================
 
