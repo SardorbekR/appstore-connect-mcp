@@ -396,6 +396,146 @@ export const getAppAvailabilityInputSchema = z.object({
 });
 
 // ============================================================================
+// Analytics Report Schemas
+// ============================================================================
+
+export const analyticsReportAccessTypeSchema = z.enum(["ONGOING", "ONE_TIME_SNAPSHOT"]);
+
+export const analyticsReportCategorySchema = z.enum([
+  "APP_STORE_ENGAGEMENT",
+  "COMMERCE",
+  "APP_USAGE",
+  "FRAMEWORKS_USAGE",
+  "PERFORMANCE",
+]);
+
+export const analyticsReportGranularitySchema = z.enum(["DAILY", "WEEKLY", "MONTHLY"]);
+
+export const createAnalyticsReportRequestInputSchema = z.object({
+  appId: appIdSchema,
+  accessType: analyticsReportAccessTypeSchema,
+});
+
+export const listAnalyticsReportRequestsInputSchema = z.object({
+  appId: appIdSchema,
+  limit: z.number().int().min(1).max(200).optional(),
+});
+
+export const getAnalyticsReportRequestInputSchema = z.object({
+  requestId: z.string().min(1, "Request ID is required"),
+});
+
+export const deleteAnalyticsReportRequestInputSchema = z.object({
+  requestId: z.string().min(1, "Request ID is required"),
+});
+
+export const listAnalyticsReportsInputSchema = z.object({
+  requestId: z.string().min(1, "Request ID is required"),
+  category: analyticsReportCategorySchema.optional(),
+  limit: z.number().int().min(1).max(200).optional(),
+});
+
+export const listAnalyticsReportInstancesInputSchema = z.object({
+  reportId: z.string().min(1, "Report ID is required"),
+  granularity: analyticsReportGranularitySchema.optional(),
+  processingDate: z.string().optional(),
+  limit: z.number().int().min(1).max(200).optional(),
+});
+
+export const listAnalyticsReportSegmentsInputSchema = z.object({
+  instanceId: z.string().min(1, "Instance ID is required"),
+  limit: z.number().int().min(1).max(200).optional(),
+});
+
+export const downloadAnalyticsReportSegmentInputSchema = z.object({
+  url: urlSchema,
+  maxRows: z.number().int().min(1).max(1000).optional(),
+});
+
+// ============================================================================
+// Sales & Finance Report Schemas
+// ============================================================================
+
+export const salesReportTypeSchema = z.enum([
+  "SALES",
+  "SUBSCRIPTION",
+  "SUBSCRIPTION_EVENT",
+  "SUBSCRIBER",
+  "PRE_ORDER",
+]);
+
+export const salesReportSubTypeSchema = z.enum(["SUMMARY", "DETAILED", "OPT_IN"]);
+
+export const reportFrequencySchema = z.enum(["DAILY", "WEEKLY", "MONTHLY", "YEARLY"]);
+
+export const financeReportTypeSchema = z.enum(["FINANCIAL", "FINANCE_DETAIL"]);
+
+export const vendorNumberSchema = z
+  .string()
+  .regex(/^\d+$/, "Vendor number must be numeric");
+
+export const getSalesReportInputSchema = z.object({
+  vendorNumber: vendorNumberSchema,
+  reportType: salesReportTypeSchema,
+  reportSubType: salesReportSubTypeSchema,
+  frequency: reportFrequencySchema,
+  reportDate: z.string().min(1, "Report date is required"),
+  reportVersion: z.string().optional(),
+  maxRows: z.number().int().min(1).max(1000).optional(),
+});
+
+export const getFinanceReportInputSchema = z.object({
+  vendorNumber: vendorNumberSchema,
+  regionCode: z.string().min(1, "Region code is required").max(2, "Region code must be 1-2 characters"),
+  reportDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}$/, "Report date must be in YYYY-MM format"),
+  reportType: financeReportTypeSchema,
+  maxRows: z.number().int().min(1).max(1000).optional(),
+});
+
+// ============================================================================
+// Performance & Diagnostics Schemas
+// ============================================================================
+
+export const perfMetricTypeSchema = z.enum([
+  "DISK",
+  "HANG",
+  "BATTERY",
+  "LAUNCH",
+  "MEMORY",
+  "ANIMATION",
+  "TERMINATION",
+]);
+
+export const diagnosticTypeSchema = z.enum(["DISK_WRITES", "HANGS", "LAUNCHES"]);
+
+export const getAppPerfMetricsInputSchema = z.object({
+  appId: appIdSchema,
+  metricType: perfMetricTypeSchema,
+  platform: platformSchema.optional(),
+  deviceType: z.string().optional(),
+});
+
+export const getBuildPerfMetricsInputSchema = z.object({
+  buildId: buildIdSchema,
+  metricType: perfMetricTypeSchema,
+  platform: platformSchema.optional(),
+  deviceType: z.string().optional(),
+});
+
+export const listDiagnosticSignaturesInputSchema = z.object({
+  buildId: buildIdSchema,
+  diagnosticType: diagnosticTypeSchema.optional(),
+  limit: z.number().int().min(1).max(200).optional(),
+});
+
+export const listDiagnosticLogsInputSchema = z.object({
+  signatureId: z.string().min(1, "Signature ID is required"),
+  limit: z.number().int().min(1).max(200).optional(),
+});
+
+// ============================================================================
 // Pricing Schemas
 // ============================================================================
 
