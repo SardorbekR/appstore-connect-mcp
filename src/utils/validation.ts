@@ -569,6 +569,7 @@ export const listSubscriptionPricePointsInputSchema = z.object({
   subscriptionId: z.string().min(1, "Subscription ID is required"),
   territory: territoryIdSchema.optional(),
   limit: z.number().int().min(1).max(200).optional(),
+  offset: z.number().int().min(0).optional(),
 });
 
 // List subscription prices input
