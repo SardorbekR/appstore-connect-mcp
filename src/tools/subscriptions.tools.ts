@@ -702,29 +702,48 @@ export async function listSubscriptionPricePoints(
     const params = validateInput(listSubscriptionPricePointsInputSchema, input);
 
     const queryParams: Record<string, string | number | boolean | undefined> = {
-      limit: params.limit,
+      limit: params.limit || 200,
     };
 
     if (params.territory) {
       queryParams["filter[territory]"] = params.territory;
     }
 
-    const response = await client.get<ASCListResponse<SubscriptionPricePoint>>(
+    // Use pagination to skip past the first N results
+    const offset = params.offset || 0;
+    const maxItems = (params.limit || 200) + offset;
+
+    const results: Array<{
+      id: string;
+      customerPrice: string;
+      proceeds: string;
+      proceedsYear2: string;
+    }> = [];
+
+    let itemIndex = 0;
+    for await (const pricePoint of client.paginate<SubscriptionPricePoint>(
       `/subscriptions/${params.subscriptionId}/pricePoints`,
-      queryParams
-    );
+      queryParams,
+      maxItems
+    )) {
+      if (itemIndex >= offset) {
+        results.push({
+          id: pricePoint.id,
+          customerPrice: pricePoint.attributes.customerPrice,
+          proceeds: pricePoint.attributes.proceeds,
+          proceedsYear2: pricePoint.attributes.proceedsYear2,
+        });
+      }
+      itemIndex++;
+      if (results.length >= (params.limit || 200)) break;
+    }
 
     return {
       success: true,
-      data: response.data.map((pricePoint) => ({
-        id: pricePoint.id,
-        customerPrice: pricePoint.attributes.customerPrice,
-        proceeds: pricePoint.attributes.proceeds,
-        proceedsYear2: pricePoint.attributes.proceedsYear2,
-      })),
+      data: results,
       meta: {
-        total: response.meta?.paging?.total,
-        returned: response.data.length,
+        total: undefined,
+        returned: results.length,
       },
     };
   } catch (error) {
@@ -1578,7 +1597,7 @@ export const subscriptionToolDefinitions = [
   {
     name: "list_subscription_price_points",
     description:
-      "List available price points for a subscription, showing customer price and developer proceeds. Optionally filter by territory.",
+      "List available price points for a subscription, showing customer price and developer proceeds. Optionally filter by territory. Use offset to paginate beyond the first 200 results.",
     annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
@@ -1596,6 +1615,11 @@ export const subscriptionToolDefinitions = [
           description: "Maximum number of price points to return (1-200)",
           minimum: 1,
           maximum: 200,
+        },
+        offset: {
+          type: "number",
+          description: "Number of results to skip for pagination (e.g., 200 to get the next page after the first 200)",
+          minimum: 0,
         },
       },
       required: ["subscriptionId"],
