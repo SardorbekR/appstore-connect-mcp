@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/sardorbekr-appstore-connect-mcp-badge.png)](https://mseep.ai/app/sardorbekr-appstore-connect-mcp)
+
 # App Store Connect MCP Server
 
 [![npm version](https://img.shields.io/npm/v/asc-mcp.svg)](https://www.npmjs.com/package/asc-mcp)
