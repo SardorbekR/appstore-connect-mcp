@@ -5,6 +5,17 @@
 import type { AppStoreConnectClient } from "../api/client.js";
 
 import {
+  analyticsToolDefinitions,
+  createAnalyticsReportRequest,
+  deleteAnalyticsReportRequest,
+  downloadAnalyticsReportSegment,
+  getAnalyticsReportRequest,
+  listAnalyticsReportInstances,
+  listAnalyticsReportRequests,
+  listAnalyticsReportSegments,
+  listAnalyticsReports,
+} from "./analytics.tools.js";
+import {
   appInfoToolDefinitions,
   listAppInfoLocalizations,
   listAppInfos,
@@ -44,12 +55,24 @@ import {
   updateVersionLocalization,
 } from "./localizations.tools.js";
 import {
+  getAppPerfMetrics,
+  getBuildPerfMetrics,
+  listDiagnosticLogs,
+  listDiagnosticSignatures,
+  performanceToolDefinitions,
+} from "./performance.tools.js";
+import {
   getPricePointEqualizations,
   listAppPricePoints,
   listTerritories,
   pricingToolDefinitions,
   setAppPrices,
 } from "./pricing.tools.js";
+import {
+  getFinanceReport,
+  getSalesReport,
+  salesReportsToolDefinitions,
+} from "./sales-reports.tools.js";
 import {
   listScreenshotSets,
   listScreenshots,
@@ -189,6 +212,26 @@ const toolHandlers: Record<string, ToolHandler> = {
   get_subscription_availability: getSubscriptionAvailability,
   set_subscription_availability: setSubscriptionAvailability,
   create_subscription_price: createSubscriptionPrice,
+
+  // Analytics
+  create_analytics_report_request: createAnalyticsReportRequest,
+  list_analytics_report_requests: listAnalyticsReportRequests,
+  get_analytics_report_request: getAnalyticsReportRequest,
+  delete_analytics_report_request: deleteAnalyticsReportRequest,
+  list_analytics_reports: listAnalyticsReports,
+  list_analytics_report_instances: listAnalyticsReportInstances,
+  list_analytics_report_segments: listAnalyticsReportSegments,
+  download_analytics_report_segment: downloadAnalyticsReportSegment,
+
+  // Sales & Finance
+  get_sales_report: getSalesReport,
+  get_finance_report: getFinanceReport,
+
+  // Performance & Diagnostics
+  get_app_perf_metrics: getAppPerfMetrics,
+  get_build_perf_metrics: getBuildPerfMetrics,
+  list_diagnostic_signatures: listDiagnosticSignatures,
+  list_diagnostic_logs: listDiagnosticLogs,
 };
 
 // All tool definitions
@@ -206,6 +249,9 @@ export const allToolDefinitions = [
   ...categoriesToolDefinitions,
   ...pricingToolDefinitions,
   ...subscriptionToolDefinitions,
+  ...analyticsToolDefinitions,
+  ...salesReportsToolDefinitions,
+  ...performanceToolDefinitions,
 ];
 
 /**
