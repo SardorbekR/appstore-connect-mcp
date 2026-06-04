@@ -470,9 +470,7 @@ export const reportFrequencySchema = z.enum(["DAILY", "WEEKLY", "MONTHLY", "YEAR
 
 export const financeReportTypeSchema = z.enum(["FINANCIAL", "FINANCE_DETAIL"]);
 
-export const vendorNumberSchema = z
-  .string()
-  .regex(/^\d+$/, "Vendor number must be numeric");
+export const vendorNumberSchema = z.string().regex(/^\d+$/, "Vendor number must be numeric");
 
 export const getSalesReportInputSchema = z.object({
   vendorNumber: vendorNumberSchema,
@@ -486,10 +484,11 @@ export const getSalesReportInputSchema = z.object({
 
 export const getFinanceReportInputSchema = z.object({
   vendorNumber: vendorNumberSchema,
-  regionCode: z.string().min(1, "Region code is required").max(2, "Region code must be 1-2 characters"),
-  reportDate: z
+  regionCode: z
     .string()
-    .regex(/^\d{4}-\d{2}$/, "Report date must be in YYYY-MM format"),
+    .min(1, "Region code is required")
+    .max(2, "Region code must be 1-2 characters"),
+  reportDate: z.string().regex(/^\d{4}-\d{2}$/, "Report date must be in YYYY-MM format"),
   reportType: financeReportTypeSchema,
   maxRows: z.number().int().min(1).max(1000).optional(),
 });
@@ -575,4 +574,284 @@ export const setAppPricesInputSchema = z.object({
       })
     )
     .min(1, "At least one manual price entry is required"),
+});
+
+// ============================================================================
+// Subscription Schemas
+// ============================================================================
+
+export const subscriptionPeriodSchema = z.enum([
+  "ONE_WEEK",
+  "ONE_MONTH",
+  "TWO_MONTHS",
+  "THREE_MONTHS",
+  "SIX_MONTHS",
+  "ONE_YEAR",
+]);
+
+// List subscription groups input
+export const listSubscriptionGroupsInputSchema = z.object({
+  appId: appIdSchema,
+  limit: z.number().int().min(1).max(200).optional(),
+});
+
+// Get subscription group input
+export const getSubscriptionGroupInputSchema = z.object({
+  subscriptionGroupId: z.string().min(1, "Subscription Group ID is required"),
+});
+
+// Create subscription group input
+export const createSubscriptionGroupInputSchema = z.object({
+  appId: appIdSchema,
+  referenceName: z.string().min(1, "Reference name is required"),
+});
+
+// Update subscription group input
+export const updateSubscriptionGroupInputSchema = z.object({
+  subscriptionGroupId: z.string().min(1, "Subscription Group ID is required"),
+  referenceName: z.string().min(1, "Reference name is required"),
+});
+
+// List subscription group localizations input
+export const listSubscriptionGroupLocalizationsInputSchema = z.object({
+  subscriptionGroupId: z.string().min(1, "Subscription Group ID is required"),
+  limit: z.number().int().min(1).max(200).optional(),
+});
+
+// Get subscription group localization input
+export const getSubscriptionGroupLocalizationInputSchema = z.object({
+  localizationId: z.string().min(1, "Localization ID is required"),
+});
+
+// Create subscription group localization input
+export const createSubscriptionGroupLocalizationInputSchema = z.object({
+  subscriptionGroupId: z.string().min(1, "Subscription Group ID is required"),
+  name: z.string().min(1, "Name is required"),
+  locale: z.string().min(1, "Locale is required"),
+  customAppName: z.string().optional(),
+  customAppDescription: z.string().optional(),
+});
+
+// Update subscription group localization input
+export const updateSubscriptionGroupLocalizationInputSchema = z.object({
+  localizationId: z.string().min(1, "Localization ID is required"),
+  name: z.string().optional(),
+  customAppName: z.string().optional(),
+  customAppDescription: z.string().optional(),
+});
+
+// List subscriptions input
+export const listSubscriptionsInputSchema = z.object({
+  subscriptionGroupId: z.string().min(1, "Subscription Group ID is required"),
+  limit: z.number().int().min(1).max(200).optional(),
+});
+
+// Get subscription input
+export const getSubscriptionInputSchema = z.object({
+  subscriptionId: z.string().min(1, "Subscription ID is required"),
+});
+
+// Create subscription input
+export const createSubscriptionInputSchema = z.object({
+  subscriptionGroupId: z.string().min(1, "Subscription Group ID is required"),
+  name: z.string().min(1, "Name is required"),
+  productId: z.string().min(1, "Product ID is required"),
+  subscriptionPeriod: subscriptionPeriodSchema,
+  familySharable: z.boolean().optional(),
+  reviewNote: z.string().max(4000).optional(),
+  groupLevel: z.number().int().min(1).optional(),
+});
+
+// Update subscription input
+export const updateSubscriptionInputSchema = z.object({
+  subscriptionId: z.string().min(1, "Subscription ID is required"),
+  name: z.string().min(1).optional(),
+  familySharable: z.boolean().optional(),
+  subscriptionPeriod: subscriptionPeriodSchema.optional(),
+  reviewNote: z.string().max(4000).optional(),
+  groupLevel: z.number().int().min(1).optional(),
+});
+
+// Delete subscription input
+export const deleteSubscriptionInputSchema = z.object({
+  subscriptionId: z.string().min(1, "Subscription ID is required"),
+});
+
+// List subscription localizations input
+export const listSubscriptionLocalizationsInputSchema = z.object({
+  subscriptionId: z.string().min(1, "Subscription ID is required"),
+  limit: z.number().int().min(1).max(200).optional(),
+});
+
+// Create subscription localization input
+export const createSubscriptionLocalizationInputSchema = z.object({
+  subscriptionId: z.string().min(1, "Subscription ID is required"),
+  name: z.string().min(1, "Name is required"),
+  locale: localeSchema,
+  description: z.string().optional(),
+});
+
+// Update subscription localization input
+export const updateSubscriptionLocalizationInputSchema = z.object({
+  localizationId: z.string().min(1, "Localization ID is required"),
+  name: z.string().min(1).optional(),
+  description: z.string().optional(),
+});
+
+// Delete subscription localization input
+export const deleteSubscriptionLocalizationInputSchema = z.object({
+  localizationId: z.string().min(1, "Localization ID is required"),
+});
+
+// List subscription price points input
+export const listSubscriptionPricePointsInputSchema = z.object({
+  subscriptionId: z.string().min(1, "Subscription ID is required"),
+  territory: territoryIdSchema.optional(),
+  limit: z.number().int().min(1).max(200).optional(),
+  offset: z.number().int().min(0).optional(),
+});
+
+// List subscription prices input
+export const listSubscriptionPricesInputSchema = z.object({
+  subscriptionId: z.string().min(1, "Subscription ID is required"),
+  territory: territoryIdSchema.optional(),
+  limit: z.number().int().min(1).max(200).optional(),
+});
+
+// Get subscription availability input
+export const getSubscriptionAvailabilityInputSchema = z.object({
+  subscriptionId: z.string().min(1, "Subscription ID is required"),
+});
+
+// Promotional offer schemas
+export const subscriptionOfferDurationSchema = z.enum([
+  "THREE_DAYS",
+  "ONE_WEEK",
+  "TWO_WEEKS",
+  "ONE_MONTH",
+  "TWO_MONTHS",
+  "THREE_MONTHS",
+  "SIX_MONTHS",
+  "ONE_YEAR",
+]);
+
+export const subscriptionOfferModeSchema = z.enum(["FREE_TRIAL", "PAY_AS_YOU_GO", "PAY_UP_FRONT"]);
+
+const promotionalOfferPriceEntrySchema = z.object({
+  territory: territoryIdSchema,
+  pricePointId: z.string().min(1, "Price point ID is required"),
+});
+
+function isPaidPromotionalOfferMode(offerMode: string | undefined): boolean {
+  return offerMode === "PAY_AS_YOU_GO" || offerMode === "PAY_UP_FRONT";
+}
+
+function addDuplicatePromotionalOfferTerritoryIssues(
+  prices: Array<{ territory: string; pricePointId: string }> | undefined,
+  ctx: z.RefinementCtx
+): void {
+  if (!prices) return;
+
+  const seen = new Set<string>();
+  for (const [index, price] of prices.entries()) {
+    if (!seen.has(price.territory)) {
+      seen.add(price.territory);
+      continue;
+    }
+
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Each promotional offer price must use a unique territory",
+      path: ["prices", index, "territory"],
+    });
+  }
+}
+
+function addPromotionalOfferModeIssues(
+  offerMode: z.infer<typeof subscriptionOfferModeSchema> | undefined,
+  periodCount: number | undefined,
+  prices: Array<{ territory: string; pricePointId: string }> | undefined,
+  ctx: z.RefinementCtx
+): void {
+  if (!isPaidPromotionalOfferMode(offerMode)) return;
+
+  if (periodCount === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Period count is required for paid promotional offers",
+      path: ["periodCount"],
+    });
+  }
+
+  if (!prices || prices.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "At least one price is required for paid promotional offers",
+      path: ["prices"],
+    });
+  }
+}
+
+// List promotional offers input
+export const listPromotionalOffersInputSchema = z.object({
+  subscriptionId: z.string().min(1, "Subscription ID is required"),
+  limit: z.number().int().min(1).max(200).optional(),
+});
+
+// Create promotional offer input
+export const createPromotionalOfferInputSchema = z
+  .object({
+    subscriptionId: z.string().min(1, "Subscription ID is required"),
+    name: z.string().min(1, "Name is required"),
+    offerCode: z.string().min(1, "Offer code is required"),
+    duration: subscriptionOfferDurationSchema,
+    offerMode: subscriptionOfferModeSchema,
+    periodCount: z.number().int().min(1).optional(),
+    prices: z.array(promotionalOfferPriceEntrySchema).optional(),
+  })
+  .superRefine((params, ctx) => {
+    addPromotionalOfferModeIssues(params.offerMode, params.periodCount, params.prices, ctx);
+    addDuplicatePromotionalOfferTerritoryIssues(params.prices, ctx);
+  });
+
+// Update promotional offer input
+export const updatePromotionalOfferInputSchema = z
+  .object({
+    promotionalOfferId: z.string().min(1, "Promotional offer ID is required"),
+    name: z.string().min(1).optional(),
+    offerCode: z.string().min(1).optional(),
+    duration: subscriptionOfferDurationSchema.optional(),
+    offerMode: subscriptionOfferModeSchema.optional(),
+    periodCount: z.number().int().min(1).optional(),
+    prices: z.array(promotionalOfferPriceEntrySchema).optional(),
+  })
+  .superRefine((params, ctx) => {
+    addPromotionalOfferModeIssues(params.offerMode, params.periodCount, params.prices, ctx);
+    addDuplicatePromotionalOfferTerritoryIssues(params.prices, ctx);
+  });
+
+// Delete promotional offer input
+export const deletePromotionalOfferInputSchema = z.object({
+  promotionalOfferId: z.string().min(1, "Promotional offer ID is required"),
+});
+
+// List promotional offer prices input
+export const listPromotionalOfferPricesInputSchema = z.object({
+  promotionalOfferId: z.string().min(1, "Promotional offer ID is required"),
+  limit: z.number().int().min(1).max(200).optional(),
+});
+
+// Set subscription availability input
+export const setSubscriptionAvailabilityInputSchema = z.object({
+  subscriptionId: z.string().min(1, "Subscription ID is required"),
+  availableInNewTerritories: z.boolean(),
+  territories: z.array(territoryIdSchema).optional(),
+});
+
+// Create subscription price input
+export const createSubscriptionPriceInputSchema = z.object({
+  subscriptionId: z.string().min(1, "Subscription ID is required"),
+  subscriptionPricePointId: z.string().min(1, "Subscription Price Point ID is required"),
+  startDate: z.string().nullable().optional(),
+  preserveCurrentPrice: z.boolean().optional(),
 });

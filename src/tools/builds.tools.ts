@@ -83,6 +83,7 @@ export const buildsToolDefinitions = [
   {
     name: "list_builds",
     description: "List all builds for an app.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -103,6 +104,7 @@ export const buildsToolDefinitions = [
   {
     name: "get_build",
     description: "Get details of a specific build.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {

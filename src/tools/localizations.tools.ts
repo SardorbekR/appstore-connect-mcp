@@ -239,6 +239,7 @@ export const localizationsToolDefinitions = [
     name: "list_version_localizations",
     description:
       "List all localizations for an App Store version. Returns description, keywords, what's new, and URLs for each locale.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -259,6 +260,7 @@ export const localizationsToolDefinitions = [
   {
     name: "get_version_localization",
     description: "Get detailed information about a specific version localization.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -274,6 +276,7 @@ export const localizationsToolDefinitions = [
     name: "create_version_localization",
     description:
       "Create a new localization for an App Store version. Add descriptions, keywords, and other metadata in a specific locale.",
+    annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -316,6 +319,7 @@ export const localizationsToolDefinitions = [
   {
     name: "update_version_localization",
     description: "Update an existing version localization. Only provided fields will be updated.",
+    annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -354,6 +358,7 @@ export const localizationsToolDefinitions = [
   {
     name: "delete_version_localization",
     description: "Delete a version localization. Cannot delete the primary locale.",
+    annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object" as const,
       properties: {

@@ -146,6 +146,7 @@ export const appInfoToolDefinitions = [
     name: "list_app_infos",
     description:
       "List app info records for an app. Use this to get the appInfoId needed for localization operations.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -167,6 +168,7 @@ export const appInfoToolDefinitions = [
     name: "list_app_info_localizations",
     description:
       "List all localizations for an app info. Returns app name, subtitle, and privacy policy info for each locale.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -188,6 +190,7 @@ export const appInfoToolDefinitions = [
     name: "update_app_info_localization",
     description:
       "Update an app info localization. Use this to change app name, subtitle, or privacy policy URL for a locale.",
+    annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object" as const,
       properties: {
