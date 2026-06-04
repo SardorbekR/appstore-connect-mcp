@@ -917,7 +917,7 @@ export interface SubscriptionAttributes {
 }
 
 export interface SubscriptionRelationships {
-  subscriptionGroup?: Relationship<"subscriptionGroups">;
+  group?: Relationship<"subscriptionGroups">;
   subscriptionLocalizations?: Relationship<"subscriptionLocalizations">;
   appStoreReviewScreenshot?: Relationship<"subscriptionAppStoreReviewScreenshots">;
   pricePoints?: Relationship<"subscriptionPricePoints">;
@@ -1185,7 +1185,7 @@ export interface CreateSubscriptionPriceRequest {
 
 export interface SubscriptionPriceAttributes {
   startDate?: string | null;
-  preserveCurrentPrice?: boolean;
+  preserved?: boolean;
 }
 
 export interface SubscriptionPriceRelationships {
@@ -1219,7 +1219,7 @@ export interface SubscriptionPromotionalOfferAttributes {
   offerCode?: string;
   duration?: SubscriptionOfferDuration;
   offerMode?: SubscriptionOfferMode;
-  periodCount?: number;
+  numberOfPeriods?: number;
 }
 
 export interface SubscriptionPromotionalOfferRelationships {
