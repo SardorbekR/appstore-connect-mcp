@@ -14,6 +14,7 @@ import type {
   CreateSubscriptionPromotionalOfferRequest,
   CreateSubscriptionRequest,
   GetSubscriptionAvailabilityResponse,
+  Relationship,
   Subscription,
   SubscriptionAvailability,
   SubscriptionGroup,
@@ -49,14 +50,14 @@ import {
   listPromotionalOffersInputSchema,
   listSubscriptionGroupLocalizationsInputSchema,
   listSubscriptionGroupsInputSchema,
-  updatePromotionalOfferInputSchema,
-  updateSubscriptionGroupInputSchema,
-  updateSubscriptionGroupLocalizationInputSchema,
   listSubscriptionLocalizationsInputSchema,
   listSubscriptionPricePointsInputSchema,
   listSubscriptionPricesInputSchema,
   listSubscriptionsInputSchema,
   setSubscriptionAvailabilityInputSchema,
+  updatePromotionalOfferInputSchema,
+  updateSubscriptionGroupInputSchema,
+  updateSubscriptionGroupLocalizationInputSchema,
   updateSubscriptionInputSchema,
   updateSubscriptionLocalizationInputSchema,
   validateInput,
@@ -465,10 +466,7 @@ export async function createSubscription(
       },
     };
 
-    const response = await client.post<ASCResponse<Subscription>>(
-      "/subscriptions",
-      requestBody
-    );
+    const response = await client.post<ASCResponse<Subscription>>("/subscriptions", requestBody);
 
     return {
       success: true,
@@ -715,9 +713,9 @@ export async function listSubscriptionPricePoints(
 
     const results: Array<{
       id: string;
-      customerPrice: string;
-      proceeds: string;
-      proceedsYear2: string;
+      customerPrice?: string;
+      proceeds?: string;
+      proceedsYear2?: string;
     }> = [];
 
     let itemIndex = 0;
@@ -754,6 +752,59 @@ export async function listSubscriptionPricePoints(
 /**
  * List current prices for a subscription, optionally filtered by territory
  */
+function getRelationshipId(relationship: Relationship | undefined): string | undefined {
+  const data = relationship?.data;
+  if (!data || Array.isArray(data)) return undefined;
+  return data.id;
+}
+
+function indexPricingIncludes(included: Array<SubscriptionPricePoint | Territory>): {
+  pricePointMap: Map<string, SubscriptionPricePoint>;
+  territoryMap: Map<string, Territory>;
+} {
+  const pricePointMap = new Map<string, SubscriptionPricePoint>();
+  const territoryMap = new Map<string, Territory>();
+
+  for (const item of included) {
+    if (item.type === "subscriptionPricePoints") {
+      pricePointMap.set(item.id, item as SubscriptionPricePoint);
+      continue;
+    }
+
+    territoryMap.set(item.id, item as Territory);
+  }
+
+  return { pricePointMap, territoryMap };
+}
+
+function resolvePricePoint(
+  pricePointId: string | undefined,
+  pricePointMap: Map<string, SubscriptionPricePoint>
+): { id: string; customerPrice?: string; proceeds?: string } | undefined {
+  if (!pricePointId) return undefined;
+
+  const pricePoint = pricePointMap.get(pricePointId);
+  if (!pricePoint) return { id: pricePointId };
+
+  return {
+    id: pricePoint.id,
+    customerPrice: pricePoint.attributes.customerPrice,
+    proceeds: pricePoint.attributes.proceeds,
+  };
+}
+
+function resolveTerritory(
+  territoryId: string | undefined,
+  territoryMap: Map<string, Territory>
+): { id: string; currency?: string } | undefined {
+  if (!territoryId) return undefined;
+
+  const territory = territoryMap.get(territoryId);
+  if (!territory) return { id: territoryId };
+
+  return { id: territory.id, currency: territory.attributes.currency };
+}
+
 export async function listSubscriptionPrices(
   client: AppStoreConnectClient,
   input: unknown
@@ -778,36 +829,19 @@ export async function listSubscriptionPrices(
     );
 
     const included = (response.included ?? []) as Array<SubscriptionPricePoint | Territory>;
-    const pricePointMap = new Map<string, SubscriptionPricePoint>();
-    const territoryMap = new Map<string, Territory>();
-    for (const item of included) {
-      if ((item as { type: string }).type === "subscriptionPricePoints") {
-        pricePointMap.set(item.id, item as SubscriptionPricePoint);
-      } else if ((item as { type: string }).type === "territories") {
-        territoryMap.set(item.id, item as Territory);
-      }
-    }
+    const { pricePointMap, territoryMap } = indexPricingIncludes(included);
 
     return {
       success: true,
       data: response.data.map((price) => {
-        const ppData = price.relationships?.subscriptionPricePoint?.data;
-        const ppId = ppData && !Array.isArray(ppData) ? ppData.id : undefined;
-        const pp = ppId ? pricePointMap.get(ppId) : undefined;
-
-        const terrData = price.relationships?.territory?.data;
-        const terrId = terrData && !Array.isArray(terrData) ? terrData.id : undefined;
-        const territory = terrId ? territoryMap.get(terrId) : undefined;
+        const pricePointId = getRelationshipId(price.relationships?.subscriptionPricePoint);
+        const territoryId = getRelationshipId(price.relationships?.territory);
 
         return {
           id: price.id,
           startDate: price.attributes?.startDate ?? null,
-          pricePoint: pp
-            ? { id: pp.id, customerPrice: pp.attributes.customerPrice, proceeds: pp.attributes.proceeds }
-            : ppId ? { id: ppId } : undefined,
-          territory: territory
-            ? { id: territory.id, currency: territory.attributes.currency }
-            : terrId ? { id: terrId } : undefined,
+          pricePoint: resolvePricePoint(pricePointId, pricePointMap),
+          territory: resolveTerritory(territoryId, territoryMap),
         };
       }),
       meta: {
@@ -947,7 +981,7 @@ export async function createSubscriptionPrice(
         subscriptionId: params.subscriptionId,
         subscriptionPricePointId: params.subscriptionPricePointId,
         startDate: response.data.attributes?.startDate ?? null,
-        preserveCurrentPrice: response.data.attributes?.preserveCurrentPrice,
+        preserveCurrentPrice: response.data.attributes?.preserved,
       },
     };
   } catch (error) {
@@ -959,23 +993,23 @@ export async function createSubscriptionPrice(
 // Promotional offer helpers
 // ---------------------------------------------------------------------------
 
-function buildPriceIncludes(
-  prices: Array<{ territory: string; pricePointId: string }>
-): {
+function buildPriceIncludes(prices: Array<{ territory: string; pricePointId: string }>): {
   pricesData: Array<{ type: "subscriptionPromotionalOfferPrices"; id: string }>;
   included: CreateSubscriptionPromotionalOfferRequest["included"];
 } {
   const pricesData: Array<{ type: "subscriptionPromotionalOfferPrices"; id: string }> = [];
-  const included: CreateSubscriptionPromotionalOfferRequest["included"] = [];
+  const included: NonNullable<CreateSubscriptionPromotionalOfferRequest["included"]> = [];
   for (const entry of prices) {
     const tempId = `\${${entry.territory}-promo}`;
     pricesData.push({ type: "subscriptionPromotionalOfferPrices", id: tempId });
-    included!.push({
+    included.push({
       type: "subscriptionPromotionalOfferPrices",
       id: tempId,
       attributes: {},
       relationships: {
-        subscriptionPricePoint: { data: { type: "subscriptionPricePoints", id: entry.pricePointId } },
+        subscriptionPricePoint: {
+          data: { type: "subscriptionPricePoints", id: entry.pricePointId },
+        },
         territory: { data: { type: "territories", id: entry.territory } },
       },
     });
@@ -1006,7 +1040,7 @@ export async function listPromotionalOffers(
         offerCode: offer.attributes.offerCode,
         duration: offer.attributes.duration,
         offerMode: offer.attributes.offerMode,
-        periodCount: offer.attributes.periodCount,
+        periodCount: offer.attributes.numberOfPeriods,
       })),
       meta: {
         total: response.meta?.paging?.total,
@@ -1061,7 +1095,7 @@ export async function createPromotionalOffer(
         offerCode: response.data.attributes.offerCode,
         duration: response.data.attributes.duration,
         offerMode: response.data.attributes.offerMode,
-        periodCount: response.data.attributes.periodCount,
+        periodCount: response.data.attributes.numberOfPeriods,
       },
     };
   } catch (error) {
@@ -1093,10 +1127,10 @@ export async function updatePromotionalOffer(
       },
     };
 
-    if (params.prices && params.prices.length > 0) {
+    if (params.prices) {
       const { pricesData, included } = buildPriceIncludes(params.prices);
       requestBody.data.relationships = { prices: { data: pricesData } };
-      requestBody.included = included;
+      if (included && included.length > 0) requestBody.included = included;
     }
 
     const response = await client.patch<ASCResponse<SubscriptionPromotionalOffer>>(
@@ -1112,7 +1146,7 @@ export async function updatePromotionalOffer(
         offerCode: response.data.attributes.offerCode,
         duration: response.data.attributes.duration,
         offerMode: response.data.attributes.offerMode,
-        periodCount: response.data.attributes.periodCount,
+        periodCount: response.data.attributes.numberOfPeriods,
       },
     };
   } catch (error) {
@@ -1157,33 +1191,18 @@ export async function listPromotionalOfferPrices(
     );
 
     const included = (response.included ?? []) as Array<SubscriptionPricePoint | Territory>;
-    const pricePointMap = new Map<string, SubscriptionPricePoint>();
-    const territoryMap = new Map<string, Territory>();
-    for (const item of included) {
-      const type = (item as { type: string }).type;
-      if (type === "subscriptionPricePoints") pricePointMap.set(item.id, item as SubscriptionPricePoint);
-      else if (type === "territories") territoryMap.set(item.id, item as Territory);
-    }
+    const { pricePointMap, territoryMap } = indexPricingIncludes(included);
 
     return {
       success: true,
       data: response.data.map((price) => {
-        const ppData = price.relationships?.subscriptionPricePoint?.data;
-        const ppId = ppData && !Array.isArray(ppData) ? ppData.id : undefined;
-        const pp = ppId ? pricePointMap.get(ppId) : undefined;
-
-        const terrData = price.relationships?.territory?.data;
-        const terrId = terrData && !Array.isArray(terrData) ? terrData.id : undefined;
-        const territory = terrId ? territoryMap.get(terrId) : undefined;
+        const pricePointId = getRelationshipId(price.relationships?.subscriptionPricePoint);
+        const territoryId = getRelationshipId(price.relationships?.territory);
 
         return {
           id: price.id,
-          pricePoint: pp
-            ? { id: pp.id, customerPrice: pp.attributes.customerPrice, proceeds: pp.attributes.proceeds }
-            : ppId ? { id: ppId } : undefined,
-          territory: territory
-            ? { id: territory.id, currency: territory.attributes.currency }
-            : terrId ? { id: terrId } : undefined,
+          pricePoint: resolvePricePoint(pricePointId, pricePointMap),
+          territory: resolveTerritory(territoryId, territoryMap),
         };
       }),
       meta: {
@@ -1376,8 +1395,7 @@ export const subscriptionToolDefinitions = [
   },
   {
     name: "list_subscriptions",
-    description:
-      "List all auto-renewable subscriptions within a subscription group.",
+    description: "List all auto-renewable subscriptions within a subscription group.",
     annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
@@ -1413,8 +1431,7 @@ export const subscriptionToolDefinitions = [
   },
   {
     name: "create_subscription",
-    description:
-      "Create a new auto-renewable subscription within a subscription group.",
+    description: "Create a new auto-renewable subscription within a subscription group.",
     annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object" as const,
@@ -1508,8 +1525,7 @@ export const subscriptionToolDefinitions = [
   },
   {
     name: "list_subscription_localizations",
-    description:
-      "List all localizations (translated names and descriptions) for a subscription.",
+    description: "List all localizations (translated names and descriptions) for a subscription.",
     annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
@@ -1530,8 +1546,7 @@ export const subscriptionToolDefinitions = [
   },
   {
     name: "create_subscription_localization",
-    description:
-      "Create a localized name and description for a subscription in a specific locale.",
+    description: "Create a localized name and description for a subscription in a specific locale.",
     annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object" as const,
@@ -1618,7 +1633,8 @@ export const subscriptionToolDefinitions = [
         },
         offset: {
           type: "number",
-          description: "Number of results to skip for pagination (e.g., 200 to get the next page after the first 200)",
+          description:
+            "Number of results to skip for pagination (e.g., 200 to get the next page after the first 200)",
           minimum: 0,
         },
       },
@@ -1681,12 +1697,14 @@ export const subscriptionToolDefinitions = [
         },
         availableInNewTerritories: {
           type: "boolean",
-          description: "Whether the subscription is automatically available in new App Store territories",
+          description:
+            "Whether the subscription is automatically available in new App Store territories",
         },
         territories: {
           type: "array",
           items: { type: "string" },
-          description: "Explicit list of territory IDs to make available (3-letter codes, e.g., ['USA', 'GBR', 'BRA']). If omitted, only the availableInNewTerritories flag is set.",
+          description:
+            "Explicit list of territory IDs to make available (3-letter codes, e.g., ['USA', 'GBR', 'BRA']). If omitted, only the availableInNewTerritories flag is set.",
         },
       },
       required: ["subscriptionId", "availableInNewTerritories"],
@@ -1710,7 +1728,8 @@ export const subscriptionToolDefinitions = [
         },
         startDate: {
           type: "string",
-          description: "Date the price change takes effect (YYYY-MM-DD). Pass null or omit for immediate effect.",
+          description:
+            "Date the price change takes effect (YYYY-MM-DD). Pass null or omit for immediate effect.",
           nullable: true,
         },
         preserveCurrentPrice: {
@@ -1730,7 +1749,12 @@ export const subscriptionToolDefinitions = [
       type: "object" as const,
       properties: {
         subscriptionId: { type: "string", description: "The subscription ID" },
-        limit: { type: "number", description: "Maximum number of offers to return (1-200)", minimum: 1, maximum: 200 },
+        limit: {
+          type: "number",
+          description: "Maximum number of offers to return (1-200)",
+          minimum: 1,
+          maximum: 200,
+        },
       },
       required: ["subscriptionId"],
     },
@@ -1745,16 +1769,29 @@ export const subscriptionToolDefinitions = [
       properties: {
         subscriptionId: { type: "string", description: "The subscription ID" },
         name: { type: "string", description: "Internal reference name for the offer" },
-        offerCode: { type: "string", description: "Redemption code customers use to claim the offer" },
+        offerCode: {
+          type: "string",
+          description: "Redemption code customers use to claim the offer",
+        },
         duration: {
           type: "string",
-          enum: ["THREE_DAYS", "ONE_WEEK", "TWO_WEEKS", "ONE_MONTH", "TWO_MONTHS", "THREE_MONTHS", "SIX_MONTHS", "ONE_YEAR"],
+          enum: [
+            "THREE_DAYS",
+            "ONE_WEEK",
+            "TWO_WEEKS",
+            "ONE_MONTH",
+            "TWO_MONTHS",
+            "THREE_MONTHS",
+            "SIX_MONTHS",
+            "ONE_YEAR",
+          ],
           description: "Duration of the offer period",
         },
         offerMode: {
           type: "string",
           enum: ["FREE_TRIAL", "PAY_AS_YOU_GO", "PAY_UP_FRONT"],
-          description: "FREE_TRIAL: free for the duration. PAY_AS_YOU_GO: discounted recurring price. PAY_UP_FRONT: discounted upfront price.",
+          description:
+            "FREE_TRIAL: free for the duration. PAY_AS_YOU_GO: discounted recurring price. PAY_UP_FRONT: discounted upfront price.",
         },
         periodCount: {
           type: "number",
@@ -1763,12 +1800,19 @@ export const subscriptionToolDefinitions = [
         },
         prices: {
           type: "array",
-          description: "Price per territory (required for PAY_AS_YOU_GO / PAY_UP_FRONT; omit for FREE_TRIAL)",
+          description:
+            "Price per territory (required for PAY_AS_YOU_GO / PAY_UP_FRONT; omit for FREE_TRIAL)",
           items: {
             type: "object",
             properties: {
-              territory: { type: "string", description: "3-letter territory code (e.g., USA, GBR)" },
-              pricePointId: { type: "string", description: "Subscription price point ID for this territory" },
+              territory: {
+                type: "string",
+                description: "3-letter territory code (e.g., USA, GBR)",
+              },
+              pricePointId: {
+                type: "string",
+                description: "Subscription price point ID for this territory",
+              },
             },
             required: ["territory", "pricePointId"],
           },
@@ -1790,7 +1834,16 @@ export const subscriptionToolDefinitions = [
         offerCode: { type: "string", description: "Updated redemption code" },
         duration: {
           type: "string",
-          enum: ["THREE_DAYS", "ONE_WEEK", "TWO_WEEKS", "ONE_MONTH", "TWO_MONTHS", "THREE_MONTHS", "SIX_MONTHS", "ONE_YEAR"],
+          enum: [
+            "THREE_DAYS",
+            "ONE_WEEK",
+            "TWO_WEEKS",
+            "ONE_MONTH",
+            "TWO_MONTHS",
+            "THREE_MONTHS",
+            "SIX_MONTHS",
+            "ONE_YEAR",
+          ],
           description: "Updated offer duration",
         },
         offerMode: {
@@ -1836,7 +1889,12 @@ export const subscriptionToolDefinitions = [
       type: "object" as const,
       properties: {
         promotionalOfferId: { type: "string", description: "The promotional offer ID" },
-        limit: { type: "number", description: "Maximum number of prices to return (1-200)", minimum: 1, maximum: 200 },
+        limit: {
+          type: "number",
+          description: "Maximum number of prices to return (1-200)",
+          minimum: 1,
+          maximum: 200,
+        },
       },
       required: ["promotionalOfferId"],
     },

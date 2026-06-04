@@ -596,16 +596,16 @@ export const subscriptionOfferDurationSchema = z.enum([
   "ONE_YEAR",
 ]);
 
-export const subscriptionOfferModeSchema = z.enum([
-  "FREE_TRIAL",
-  "PAY_AS_YOU_GO",
-  "PAY_UP_FRONT",
-]);
+export const subscriptionOfferModeSchema = z.enum(["FREE_TRIAL", "PAY_AS_YOU_GO", "PAY_UP_FRONT"]);
 
 const promotionalOfferPriceEntrySchema = z.object({
   territory: territoryIdSchema,
   pricePointId: z.string().min(1, "Price point ID is required"),
 });
+
+function isPaidPromotionalOfferMode(offerMode: string | undefined): boolean {
+  return offerMode === "PAY_AS_YOU_GO" || offerMode === "PAY_UP_FRONT";
+}
 
 // List promotional offers input
 export const listPromotionalOffersInputSchema = z.object({
@@ -614,26 +614,66 @@ export const listPromotionalOffersInputSchema = z.object({
 });
 
 // Create promotional offer input
-export const createPromotionalOfferInputSchema = z.object({
-  subscriptionId: z.string().min(1, "Subscription ID is required"),
-  name: z.string().min(1, "Name is required"),
-  offerCode: z.string().min(1, "Offer code is required"),
-  duration: subscriptionOfferDurationSchema,
-  offerMode: subscriptionOfferModeSchema,
-  periodCount: z.number().int().min(1).optional(),
-  prices: z.array(promotionalOfferPriceEntrySchema).optional(),
-});
+export const createPromotionalOfferInputSchema = z
+  .object({
+    subscriptionId: z.string().min(1, "Subscription ID is required"),
+    name: z.string().min(1, "Name is required"),
+    offerCode: z.string().min(1, "Offer code is required"),
+    duration: subscriptionOfferDurationSchema,
+    offerMode: subscriptionOfferModeSchema,
+    periodCount: z.number().int().min(1).optional(),
+    prices: z.array(promotionalOfferPriceEntrySchema).optional(),
+  })
+  .superRefine((params, ctx) => {
+    if (!isPaidPromotionalOfferMode(params.offerMode)) return;
+
+    if (params.periodCount === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Period count is required for paid promotional offers",
+        path: ["periodCount"],
+      });
+    }
+
+    if (!params.prices || params.prices.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "At least one price is required for paid promotional offers",
+        path: ["prices"],
+      });
+    }
+  });
 
 // Update promotional offer input
-export const updatePromotionalOfferInputSchema = z.object({
-  promotionalOfferId: z.string().min(1, "Promotional offer ID is required"),
-  name: z.string().min(1).optional(),
-  offerCode: z.string().min(1).optional(),
-  duration: subscriptionOfferDurationSchema.optional(),
-  offerMode: subscriptionOfferModeSchema.optional(),
-  periodCount: z.number().int().min(1).optional(),
-  prices: z.array(promotionalOfferPriceEntrySchema).optional(),
-});
+export const updatePromotionalOfferInputSchema = z
+  .object({
+    promotionalOfferId: z.string().min(1, "Promotional offer ID is required"),
+    name: z.string().min(1).optional(),
+    offerCode: z.string().min(1).optional(),
+    duration: subscriptionOfferDurationSchema.optional(),
+    offerMode: subscriptionOfferModeSchema.optional(),
+    periodCount: z.number().int().min(1).optional(),
+    prices: z.array(promotionalOfferPriceEntrySchema).optional(),
+  })
+  .superRefine((params, ctx) => {
+    if (!isPaidPromotionalOfferMode(params.offerMode)) return;
+
+    if (params.periodCount === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Period count is required for paid promotional offers",
+        path: ["periodCount"],
+      });
+    }
+
+    if (!params.prices || params.prices.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "At least one price is required for paid promotional offers",
+        path: ["prices"],
+      });
+    }
+  });
 
 // Delete promotional offer input
 export const deletePromotionalOfferInputSchema = z.object({

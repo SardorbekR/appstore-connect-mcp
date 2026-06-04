@@ -72,10 +72,9 @@ describe("Subscription Tools", () => {
         meta: { paging: { total: 2 } },
       });
 
-      const result = await listSubscriptionGroups(
-        mockClient as unknown as AppStoreConnectClient,
-        { appId: "123456" }
-      );
+      const result = await listSubscriptionGroups(mockClient as unknown as AppStoreConnectClient, {
+        appId: "123456",
+      });
 
       expect(result).toEqual({
         success: true,
@@ -125,10 +124,9 @@ describe("Subscription Tools", () => {
         },
       });
 
-      const result = await getSubscriptionGroup(
-        mockClient as unknown as AppStoreConnectClient,
-        { subscriptionGroupId: "group1" }
-      );
+      const result = await getSubscriptionGroup(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionGroupId: "group1",
+      });
 
       expect(result).toEqual({
         success: true,
@@ -138,10 +136,7 @@ describe("Subscription Tools", () => {
     });
 
     it("should require subscriptionGroupId", async () => {
-      const result = await getSubscriptionGroup(
-        mockClient as unknown as AppStoreConnectClient,
-        {}
-      );
+      const result = await getSubscriptionGroup(mockClient as unknown as AppStoreConnectClient, {});
 
       expect(result).toEqual({
         success: false,
@@ -164,10 +159,10 @@ describe("Subscription Tools", () => {
         },
       });
 
-      const result = await createSubscriptionGroup(
-        mockClient as unknown as AppStoreConnectClient,
-        { appId: "123456", referenceName: "Pro Plan" }
-      );
+      const result = await createSubscriptionGroup(mockClient as unknown as AppStoreConnectClient, {
+        appId: "123456",
+        referenceName: "Pro Plan",
+      });
 
       expect(mockClient.post).toHaveBeenCalledWith("/subscriptionGroups", {
         data: {
@@ -186,10 +181,9 @@ describe("Subscription Tools", () => {
     });
 
     it("should require appId and referenceName", async () => {
-      const result = await createSubscriptionGroup(
-        mockClient as unknown as AppStoreConnectClient,
-        { appId: "123456" }
-      );
+      const result = await createSubscriptionGroup(mockClient as unknown as AppStoreConnectClient, {
+        appId: "123456",
+      });
 
       expect(result).toEqual({
         success: false,
@@ -212,10 +206,10 @@ describe("Subscription Tools", () => {
         },
       });
 
-      const result = await updateSubscriptionGroup(
-        mockClient as unknown as AppStoreConnectClient,
-        { subscriptionGroupId: "group1", referenceName: "Updated Name" }
-      );
+      const result = await updateSubscriptionGroup(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionGroupId: "group1",
+        referenceName: "Updated Name",
+      });
 
       expect(mockClient.patch).toHaveBeenCalledWith("/subscriptionGroups/group1", {
         data: {
@@ -232,10 +226,9 @@ describe("Subscription Tools", () => {
     });
 
     it("should require subscriptionGroupId and referenceName", async () => {
-      const result = await updateSubscriptionGroup(
-        mockClient as unknown as AppStoreConnectClient,
-        { subscriptionGroupId: "group1" }
-      );
+      const result = await updateSubscriptionGroup(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionGroupId: "group1",
+      });
 
       expect(result).toEqual({
         success: false,
@@ -291,8 +284,22 @@ describe("Subscription Tools", () => {
       expect(result).toEqual({
         success: true,
         data: [
-          { id: "gl1", name: "Premium", locale: "en-US", customAppName: "My App", customAppDescription: "Best app ever", state: "APPROVED" },
-          { id: "gl2", name: "プレミアム", locale: "ja", customAppName: undefined, customAppDescription: undefined, state: "APPROVED" },
+          {
+            id: "gl1",
+            name: "Premium",
+            locale: "en-US",
+            customAppName: "My App",
+            customAppDescription: "Best app ever",
+            state: "APPROVED",
+          },
+          {
+            id: "gl2",
+            name: "プレミアム",
+            locale: "ja",
+            customAppName: undefined,
+            customAppDescription: undefined,
+            state: "APPROVED",
+          },
         ],
         meta: { total: 2, returned: 2 },
       });
@@ -431,16 +438,13 @@ describe("Subscription Tools", () => {
         },
       });
 
-      await createSubscriptionGroupLocalization(
-        mockClient as unknown as AppStoreConnectClient,
-        {
-          subscriptionGroupId: "group1",
-          name: "Premium",
-          locale: "pt-BR",
-          customAppName: "Meu App",
-          customAppDescription: "Melhor app",
-        }
-      );
+      await createSubscriptionGroupLocalization(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionGroupId: "group1",
+        name: "Premium",
+        locale: "pt-BR",
+        customAppName: "Meu App",
+        customAppDescription: "Melhor app",
+      });
 
       expect(mockClient.post).toHaveBeenCalledWith("/subscriptionGroupLocalizations", {
         data: {
@@ -544,10 +548,9 @@ describe("Subscription Tools", () => {
         meta: { paging: { total: 1 } },
       });
 
-      const result = await listSubscriptions(
-        mockClient as unknown as AppStoreConnectClient,
-        { subscriptionGroupId: "group1" }
-      );
+      const result = await listSubscriptions(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionGroupId: "group1",
+      });
 
       expect(result).toEqual({
         success: true,
@@ -574,17 +577,13 @@ describe("Subscription Tools", () => {
         limit: 20,
       });
 
-      expect(mockClient.get).toHaveBeenCalledWith(
-        "/subscriptionGroups/group1/subscriptions",
-        { limit: 20 }
-      );
+      expect(mockClient.get).toHaveBeenCalledWith("/subscriptionGroups/group1/subscriptions", {
+        limit: 20,
+      });
     });
 
     it("should require subscriptionGroupId", async () => {
-      const result = await listSubscriptions(
-        mockClient as unknown as AppStoreConnectClient,
-        {}
-      );
+      const result = await listSubscriptions(mockClient as unknown as AppStoreConnectClient, {});
 
       expect(result).toEqual({
         success: false,
@@ -615,10 +614,9 @@ describe("Subscription Tools", () => {
         },
       });
 
-      const result = await getSubscription(
-        mockClient as unknown as AppStoreConnectClient,
-        { subscriptionId: "sub1" }
-      );
+      const result = await getSubscription(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionId: "sub1",
+      });
 
       expect(result).toEqual({
         success: true,
@@ -637,10 +635,7 @@ describe("Subscription Tools", () => {
     });
 
     it("should require subscriptionId", async () => {
-      const result = await getSubscription(
-        mockClient as unknown as AppStoreConnectClient,
-        {}
-      );
+      const result = await getSubscription(mockClient as unknown as AppStoreConnectClient, {});
 
       expect(result).toEqual({
         success: false,
@@ -668,17 +663,14 @@ describe("Subscription Tools", () => {
         },
       });
 
-      const result = await createSubscription(
-        mockClient as unknown as AppStoreConnectClient,
-        {
-          subscriptionGroupId: "group1",
-          name: "Monthly",
-          productId: "com.example.monthly",
-          subscriptionPeriod: "ONE_MONTH",
-          familySharable: false,
-          groupLevel: 1,
-        }
-      );
+      const result = await createSubscription(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionGroupId: "group1",
+        name: "Monthly",
+        productId: "com.example.monthly",
+        subscriptionPeriod: "ONE_MONTH",
+        familySharable: false,
+        groupLevel: 1,
+      });
 
       expect(mockClient.post).toHaveBeenCalledWith("/subscriptions", {
         data: {
@@ -712,10 +704,11 @@ describe("Subscription Tools", () => {
     });
 
     it("should require subscriptionGroupId, name, productId, and subscriptionPeriod", async () => {
-      const result = await createSubscription(
-        mockClient as unknown as AppStoreConnectClient,
-        { subscriptionGroupId: "group1", name: "Monthly", productId: "com.example.monthly" }
-      );
+      const result = await createSubscription(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionGroupId: "group1",
+        name: "Monthly",
+        productId: "com.example.monthly",
+      });
 
       expect(result).toEqual({
         success: false,
@@ -724,15 +717,12 @@ describe("Subscription Tools", () => {
     });
 
     it("should reject invalid subscriptionPeriod", async () => {
-      const result = await createSubscription(
-        mockClient as unknown as AppStoreConnectClient,
-        {
-          subscriptionGroupId: "group1",
-          name: "Monthly",
-          productId: "com.example.monthly",
-          subscriptionPeriod: "TWO_YEARS",
-        }
-      );
+      const result = await createSubscription(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionGroupId: "group1",
+        name: "Monthly",
+        productId: "com.example.monthly",
+        subscriptionPeriod: "TWO_YEARS",
+      });
 
       expect(result).toEqual({
         success: false,
@@ -762,10 +752,12 @@ describe("Subscription Tools", () => {
         },
       });
 
-      const result = await updateSubscription(
-        mockClient as unknown as AppStoreConnectClient,
-        { subscriptionId: "sub1", name: "Updated Monthly", familySharable: true, groupLevel: 2 }
-      );
+      const result = await updateSubscription(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionId: "sub1",
+        name: "Updated Monthly",
+        familySharable: true,
+        groupLevel: 2,
+      });
 
       expect(mockClient.patch).toHaveBeenCalledWith(
         "/subscriptions/sub1",
@@ -797,10 +789,9 @@ describe("Subscription Tools", () => {
     });
 
     it("should require subscriptionId", async () => {
-      const result = await updateSubscription(
-        mockClient as unknown as AppStoreConnectClient,
-        { name: "Updated" }
-      );
+      const result = await updateSubscription(mockClient as unknown as AppStoreConnectClient, {
+        name: "Updated",
+      });
 
       expect(result).toEqual({
         success: false,
@@ -817,20 +808,16 @@ describe("Subscription Tools", () => {
     it("should delete subscription and return success", async () => {
       mockClient.delete.mockResolvedValueOnce(undefined);
 
-      const result = await deleteSubscription(
-        mockClient as unknown as AppStoreConnectClient,
-        { subscriptionId: "sub1" }
-      );
+      const result = await deleteSubscription(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionId: "sub1",
+      });
 
       expect(mockClient.delete).toHaveBeenCalledWith("/subscriptions/sub1");
       expect(result).toEqual({ success: true });
     });
 
     it("should require subscriptionId", async () => {
-      const result = await deleteSubscription(
-        mockClient as unknown as AppStoreConnectClient,
-        {}
-      );
+      const result = await deleteSubscription(mockClient as unknown as AppStoreConnectClient, {});
 
       expect(result).toEqual({
         success: false,
@@ -879,8 +866,20 @@ describe("Subscription Tools", () => {
       expect(result).toEqual({
         success: true,
         data: [
-          { id: "loc1", name: "Monthly Plan", locale: "en-US", description: "Billed monthly", state: "APPROVED" },
-          { id: "loc2", name: "月額プラン", locale: "ja", description: "毎月請求", state: "APPROVED" },
+          {
+            id: "loc1",
+            name: "Monthly Plan",
+            locale: "en-US",
+            description: "Billed monthly",
+            state: "APPROVED",
+          },
+          {
+            id: "loc2",
+            name: "月額プラン",
+            locale: "ja",
+            description: "毎月請求",
+            state: "APPROVED",
+          },
         ],
         meta: { total: 2, returned: 2 },
       });
@@ -894,10 +893,9 @@ describe("Subscription Tools", () => {
         limit: 5,
       });
 
-      expect(mockClient.get).toHaveBeenCalledWith(
-        "/subscriptions/sub1/subscriptionLocalizations",
-        { limit: 5 }
-      );
+      expect(mockClient.get).toHaveBeenCalledWith("/subscriptions/sub1/subscriptionLocalizations", {
+        limit: 5,
+      });
     });
 
     it("should require subscriptionId", async () => {
@@ -1077,20 +1075,17 @@ describe("Subscription Tools", () => {
 
   describe("listSubscriptionPricePoints", () => {
     it("should return formatted price points", async () => {
-      mockClient.get.mockResolvedValueOnce({
-        data: [
-          {
-            id: "pp1",
-            type: "subscriptionPricePoints",
-            attributes: { customerPrice: "0.99", proceeds: "0.69", proceedsYear2: "0.85" },
-          },
-          {
-            id: "pp2",
-            type: "subscriptionPricePoints",
-            attributes: { customerPrice: "1.99", proceeds: "1.39", proceedsYear2: "1.69" },
-          },
-        ],
-        meta: { paging: { total: 2 } },
+      mockClient.paginate.mockImplementationOnce(async function* () {
+        yield {
+          id: "pp1",
+          type: "subscriptionPricePoints",
+          attributes: { customerPrice: "0.99", proceeds: "0.69", proceedsYear2: "0.85" },
+        };
+        yield {
+          id: "pp2",
+          type: "subscriptionPricePoints",
+          attributes: { customerPrice: "1.99", proceeds: "1.39", proceedsYear2: "1.69" },
+        };
       });
 
       const result = await listSubscriptionPricePoints(
@@ -1104,33 +1099,65 @@ describe("Subscription Tools", () => {
           { id: "pp1", customerPrice: "0.99", proceeds: "0.69", proceedsYear2: "0.85" },
           { id: "pp2", customerPrice: "1.99", proceeds: "1.39", proceedsYear2: "1.69" },
         ],
-        meta: { total: 2, returned: 2 },
+        meta: { total: undefined, returned: 2 },
       });
     });
 
     it("should pass territory filter", async () => {
-      mockClient.get.mockResolvedValueOnce({ data: [], meta: { paging: { total: 0 } } });
+      mockClient.paginate.mockImplementationOnce(async function* () {});
 
       await listSubscriptionPricePoints(mockClient as unknown as AppStoreConnectClient, {
         subscriptionId: "sub1",
         territory: "USA",
       });
 
-      expect(mockClient.get).toHaveBeenCalledWith(
+      expect(mockClient.paginate).toHaveBeenCalledWith(
         "/subscriptions/sub1/pricePoints",
-        expect.objectContaining({ "filter[territory]": "USA" })
+        expect.objectContaining({ "filter[territory]": "USA" }),
+        200
       );
     });
 
     it("should not include territory filter when not provided", async () => {
-      mockClient.get.mockResolvedValueOnce({ data: [], meta: { paging: { total: 0 } } });
+      mockClient.paginate.mockImplementationOnce(async function* () {});
 
       await listSubscriptionPricePoints(mockClient as unknown as AppStoreConnectClient, {
         subscriptionId: "sub1",
       });
 
-      const callArgs = mockClient.get.mock.calls[0][1] as Record<string, unknown>;
+      const callArgs = mockClient.paginate.mock.calls[0][1] as Record<string, unknown>;
       expect(callArgs).not.toHaveProperty("filter[territory]");
+    });
+
+    it("should include offset in pagination cap and skip leading results", async () => {
+      mockClient.paginate.mockImplementationOnce(async function* () {
+        yield {
+          id: "pp1",
+          type: "subscriptionPricePoints",
+          attributes: { customerPrice: "0.99", proceeds: "0.69", proceedsYear2: "0.85" },
+        };
+        yield {
+          id: "pp2",
+          type: "subscriptionPricePoints",
+          attributes: { customerPrice: "1.99", proceeds: "1.39", proceedsYear2: "1.69" },
+        };
+      });
+
+      const result = await listSubscriptionPricePoints(
+        mockClient as unknown as AppStoreConnectClient,
+        { subscriptionId: "sub1", limit: 1, offset: 1 }
+      );
+
+      expect(mockClient.paginate).toHaveBeenCalledWith(
+        "/subscriptions/sub1/pricePoints",
+        expect.objectContaining({ limit: 1 }),
+        2
+      );
+      expect(result).toEqual({
+        success: true,
+        data: [{ id: "pp2", customerPrice: "1.99", proceeds: "1.39", proceedsYear2: "1.69" }],
+        meta: { total: undefined, returned: 1 },
+      });
     });
 
     it("should require subscriptionId", async () => {
@@ -1177,16 +1204,19 @@ describe("Subscription Tools", () => {
           },
         ],
         included: [
-          { id: "pp1", type: "subscriptionPricePoints", attributes: { customerPrice: "0.99", proceeds: "0.69" } },
+          {
+            id: "pp1",
+            type: "subscriptionPricePoints",
+            attributes: { customerPrice: "0.99", proceeds: "0.69" },
+          },
           { id: "USA", type: "territories", attributes: { currency: "USD" } },
         ],
         meta: { paging: { total: 1 } },
       });
 
-      const result = await listSubscriptionPrices(
-        mockClient as unknown as AppStoreConnectClient,
-        { subscriptionId: "sub1" }
-      );
+      const result = await listSubscriptionPrices(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionId: "sub1",
+      });
 
       expect(result).toEqual({
         success: true,
@@ -1435,19 +1465,16 @@ describe("Subscription Tools", () => {
         data: {
           id: "price1",
           type: "subscriptionPrices",
-          attributes: { startDate: "2026-04-01", preserveCurrentPrice: true },
+          attributes: { startDate: "2026-04-01", preserved: true },
         },
       });
 
-      const result = await createSubscriptionPrice(
-        mockClient as unknown as AppStoreConnectClient,
-        {
-          subscriptionId: "sub1",
-          subscriptionPricePointId: "pp1",
-          startDate: "2026-04-01",
-          preserveCurrentPrice: true,
-        }
-      );
+      const result = await createSubscriptionPrice(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionId: "sub1",
+        subscriptionPricePointId: "pp1",
+        startDate: "2026-04-01",
+        preserveCurrentPrice: true,
+      });
 
       expect(mockClient.post).toHaveBeenCalledWith("/subscriptionPrices", {
         data: {
@@ -1477,14 +1504,14 @@ describe("Subscription Tools", () => {
         data: {
           id: "price2",
           type: "subscriptionPrices",
-          attributes: { startDate: null, preserveCurrentPrice: false },
+          attributes: { startDate: null, preserved: false },
         },
       });
 
-      await createSubscriptionPrice(
-        mockClient as unknown as AppStoreConnectClient,
-        { subscriptionId: "sub1", subscriptionPricePointId: "pp1" }
-      );
+      await createSubscriptionPrice(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionId: "sub1",
+        subscriptionPricePointId: "pp1",
+      });
 
       expect(mockClient.post).toHaveBeenCalledWith("/subscriptionPrices", {
         data: {
@@ -1499,10 +1526,9 @@ describe("Subscription Tools", () => {
     });
 
     it("should require subscriptionId and subscriptionPricePointId", async () => {
-      const result = await createSubscriptionPrice(
-        mockClient as unknown as AppStoreConnectClient,
-        { subscriptionId: "sub1" }
-      );
+      const result = await createSubscriptionPrice(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionId: "sub1",
+      });
 
       expect(result).toEqual({
         success: false,
@@ -1522,31 +1548,50 @@ describe("Subscription Tools", () => {
           {
             id: "po1",
             type: "subscriptionPromotionalOffers",
-            attributes: { name: "Trial Offer", offerCode: "TRIAL2026", duration: "ONE_MONTH", offerMode: "FREE_TRIAL", periodCount: undefined },
+            attributes: {
+              name: "Discount",
+              offerCode: "SAVE",
+              duration: "THREE_MONTHS",
+              offerMode: "PAY_AS_YOU_GO",
+              numberOfPeriods: 3,
+            },
           },
         ],
         meta: { paging: { total: 1 } },
       });
 
-      const result = await listPromotionalOffers(
-        mockClient as unknown as AppStoreConnectClient,
-        { subscriptionId: "sub1" }
-      );
+      const result = await listPromotionalOffers(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionId: "sub1",
+      });
 
-      expect(mockClient.get).toHaveBeenCalledWith(
-        "/subscriptions/sub1/promotionalOffers",
-        { limit: undefined }
-      );
+      expect(mockClient.get).toHaveBeenCalledWith("/subscriptions/sub1/promotionalOffers", {
+        limit: undefined,
+      });
       expect(result).toEqual({
         success: true,
-        data: [{ id: "po1", name: "Trial Offer", offerCode: "TRIAL2026", duration: "ONE_MONTH", offerMode: "FREE_TRIAL", periodCount: undefined }],
+        data: [
+          {
+            id: "po1",
+            name: "Discount",
+            offerCode: "SAVE",
+            duration: "THREE_MONTHS",
+            offerMode: "PAY_AS_YOU_GO",
+            periodCount: 3,
+          },
+        ],
         meta: { total: 1, returned: 1 },
       });
     });
 
     it("should require subscriptionId", async () => {
-      const result = await listPromotionalOffers(mockClient as unknown as AppStoreConnectClient, {});
-      expect(result).toEqual({ success: false, error: expect.objectContaining({ code: "VALIDATION_ERROR" }) });
+      const result = await listPromotionalOffers(
+        mockClient as unknown as AppStoreConnectClient,
+        {}
+      );
+      expect(result).toEqual({
+        success: false,
+        error: expect.objectContaining({ code: "VALIDATION_ERROR" }),
+      });
     });
   });
 
@@ -1560,25 +1605,34 @@ describe("Subscription Tools", () => {
         data: {
           id: "po1",
           type: "subscriptionPromotionalOffers",
-          attributes: { name: "Trial", offerCode: "FREETRIAL", duration: "ONE_MONTH", offerMode: "FREE_TRIAL", periodCount: undefined },
+          attributes: {
+            name: "Trial",
+            offerCode: "FREETRIAL",
+            duration: "ONE_MONTH",
+            offerMode: "FREE_TRIAL",
+            numberOfPeriods: undefined,
+          },
         },
       });
 
-      const result = await createPromotionalOffer(
-        mockClient as unknown as AppStoreConnectClient,
-        {
-          subscriptionId: "sub1",
-          name: "Trial",
-          offerCode: "FREETRIAL",
-          duration: "ONE_MONTH",
-          offerMode: "FREE_TRIAL",
-        }
-      );
+      const result = await createPromotionalOffer(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionId: "sub1",
+        name: "Trial",
+        offerCode: "FREETRIAL",
+        duration: "ONE_MONTH",
+        offerMode: "FREE_TRIAL",
+      });
 
       expect(mockClient.post).toHaveBeenCalledWith("/subscriptionPromotionalOffers", {
         data: {
           type: "subscriptionPromotionalOffers",
-          attributes: { name: "Trial", offerCode: "FREETRIAL", duration: "ONE_MONTH", offerMode: "FREE_TRIAL", periodCount: undefined },
+          attributes: {
+            name: "Trial",
+            offerCode: "FREETRIAL",
+            duration: "ONE_MONTH",
+            offerMode: "FREE_TRIAL",
+            numberOfPeriods: undefined,
+          },
           relationships: {
             subscription: { data: { type: "subscriptions", id: "sub1" } },
             prices: { data: [] },
@@ -1588,7 +1642,14 @@ describe("Subscription Tools", () => {
 
       expect(result).toEqual({
         success: true,
-        data: { id: "po1", name: "Trial", offerCode: "FREETRIAL", duration: "ONE_MONTH", offerMode: "FREE_TRIAL", periodCount: undefined },
+        data: {
+          id: "po1",
+          name: "Trial",
+          offerCode: "FREETRIAL",
+          duration: "ONE_MONTH",
+          offerMode: "FREE_TRIAL",
+          periodCount: undefined,
+        },
       });
     });
 
@@ -1597,27 +1658,36 @@ describe("Subscription Tools", () => {
         data: {
           id: "po2",
           type: "subscriptionPromotionalOffers",
-          attributes: { name: "Discount", offerCode: "HALF", duration: "THREE_MONTHS", offerMode: "PAY_AS_YOU_GO", periodCount: 3 },
+          attributes: {
+            name: "Discount",
+            offerCode: "HALF",
+            duration: "THREE_MONTHS",
+            offerMode: "PAY_AS_YOU_GO",
+            numberOfPeriods: 3,
+          },
         },
       });
 
-      await createPromotionalOffer(
-        mockClient as unknown as AppStoreConnectClient,
-        {
-          subscriptionId: "sub1",
-          name: "Discount",
-          offerCode: "HALF",
-          duration: "THREE_MONTHS",
-          offerMode: "PAY_AS_YOU_GO",
-          periodCount: 3,
-          prices: [{ territory: "USA", pricePointId: "pp1" }],
-        }
-      );
+      await createPromotionalOffer(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionId: "sub1",
+        name: "Discount",
+        offerCode: "HALF",
+        duration: "THREE_MONTHS",
+        offerMode: "PAY_AS_YOU_GO",
+        periodCount: 3,
+        prices: [{ territory: "USA", pricePointId: "pp1" }],
+      });
 
       expect(mockClient.post).toHaveBeenCalledWith("/subscriptionPromotionalOffers", {
         data: {
           type: "subscriptionPromotionalOffers",
-          attributes: { name: "Discount", offerCode: "HALF", duration: "THREE_MONTHS", offerMode: "PAY_AS_YOU_GO", numberOfPeriods: 3 },
+          attributes: {
+            name: "Discount",
+            offerCode: "HALF",
+            duration: "THREE_MONTHS",
+            offerMode: "PAY_AS_YOU_GO",
+            numberOfPeriods: 3,
+          },
           relationships: {
             subscription: { data: { type: "subscriptions", id: "sub1" } },
             prices: { data: [{ type: "subscriptionPromotionalOfferPrices", id: "${USA-promo}" }] },
@@ -1638,19 +1708,64 @@ describe("Subscription Tools", () => {
     });
 
     it("should require subscriptionId, name, offerCode, duration, and offerMode", async () => {
-      const result = await createPromotionalOffer(
-        mockClient as unknown as AppStoreConnectClient,
-        { subscriptionId: "sub1", name: "Trial", offerCode: "X", duration: "ONE_MONTH" }
-      );
-      expect(result).toEqual({ success: false, error: expect.objectContaining({ code: "VALIDATION_ERROR" }) });
+      const result = await createPromotionalOffer(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionId: "sub1",
+        name: "Trial",
+        offerCode: "X",
+        duration: "ONE_MONTH",
+      });
+      expect(result).toEqual({
+        success: false,
+        error: expect.objectContaining({ code: "VALIDATION_ERROR" }),
+      });
     });
 
     it("should reject invalid offerMode", async () => {
-      const result = await createPromotionalOffer(
-        mockClient as unknown as AppStoreConnectClient,
-        { subscriptionId: "sub1", name: "Trial", offerCode: "X", duration: "ONE_MONTH", offerMode: "GIFT" }
-      );
-      expect(result).toEqual({ success: false, error: expect.objectContaining({ code: "VALIDATION_ERROR" }) });
+      const result = await createPromotionalOffer(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionId: "sub1",
+        name: "Trial",
+        offerCode: "X",
+        duration: "ONE_MONTH",
+        offerMode: "GIFT",
+      });
+      expect(result).toEqual({
+        success: false,
+        error: expect.objectContaining({ code: "VALIDATION_ERROR" }),
+      });
+    });
+
+    it("should require periodCount and prices for paid offers", async () => {
+      const result = await createPromotionalOffer(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionId: "sub1",
+        name: "Discount",
+        offerCode: "HALF",
+        duration: "THREE_MONTHS",
+        offerMode: "PAY_AS_YOU_GO",
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: expect.objectContaining({ code: "VALIDATION_ERROR" }),
+      });
+      expect(mockClient.post).not.toHaveBeenCalled();
+    });
+
+    it("should reject empty prices for paid offers", async () => {
+      const result = await createPromotionalOffer(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionId: "sub1",
+        name: "Discount",
+        offerCode: "HALF",
+        duration: "THREE_MONTHS",
+        offerMode: "PAY_UP_FRONT",
+        periodCount: 1,
+        prices: [],
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: expect.objectContaining({ code: "VALIDATION_ERROR" }),
+      });
+      expect(mockClient.post).not.toHaveBeenCalled();
     });
   });
 
@@ -1664,14 +1779,22 @@ describe("Subscription Tools", () => {
         data: {
           id: "po1",
           type: "subscriptionPromotionalOffers",
-          attributes: { name: "New Name", offerCode: "NEW", duration: "ONE_WEEK", offerMode: "FREE_TRIAL", periodCount: undefined },
+          attributes: {
+            name: "New Name",
+            offerCode: "NEW",
+            duration: "ONE_WEEK",
+            offerMode: "FREE_TRIAL",
+            numberOfPeriods: undefined,
+          },
         },
       });
 
-      const result = await updatePromotionalOffer(
-        mockClient as unknown as AppStoreConnectClient,
-        { promotionalOfferId: "po1", name: "New Name", offerCode: "NEW", duration: "ONE_WEEK" }
-      );
+      const result = await updatePromotionalOffer(mockClient as unknown as AppStoreConnectClient, {
+        promotionalOfferId: "po1",
+        name: "New Name",
+        offerCode: "NEW",
+        duration: "ONE_WEEK",
+      });
 
       expect(mockClient.patch).toHaveBeenCalledWith(
         "/subscriptionPromotionalOffers/po1",
@@ -1679,7 +1802,11 @@ describe("Subscription Tools", () => {
           data: expect.objectContaining({
             type: "subscriptionPromotionalOffers",
             id: "po1",
-            attributes: expect.objectContaining({ name: "New Name", offerCode: "NEW", duration: "ONE_WEEK" }),
+            attributes: expect.objectContaining({
+              name: "New Name",
+              offerCode: "NEW",
+              duration: "ONE_WEEK",
+            }),
           }),
         })
       );
@@ -1695,23 +1822,79 @@ describe("Subscription Tools", () => {
         data: {
           id: "po1",
           type: "subscriptionPromotionalOffers",
-          attributes: { name: "Offer", offerCode: "X", duration: "ONE_MONTH", offerMode: "PAY_AS_YOU_GO", periodCount: 1 },
+          attributes: {
+            name: "Offer",
+            offerCode: "X",
+            duration: "ONE_MONTH",
+            offerMode: "PAY_AS_YOU_GO",
+            numberOfPeriods: 1,
+          },
         },
       });
 
-      await updatePromotionalOffer(
-        mockClient as unknown as AppStoreConnectClient,
-        { promotionalOfferId: "po1", prices: [{ territory: "GBR", pricePointId: "pp2" }] }
-      );
+      await updatePromotionalOffer(mockClient as unknown as AppStoreConnectClient, {
+        promotionalOfferId: "po1",
+        prices: [{ territory: "GBR", pricePointId: "pp2" }],
+      });
 
       const callArg = mockClient.patch.mock.calls[0][1] as Record<string, unknown>;
       expect(callArg).toHaveProperty("included");
-      expect((callArg.data as Record<string, unknown>)).toHaveProperty("relationships");
+      expect(callArg.data as Record<string, unknown>).toHaveProperty("relationships");
+    });
+
+    it("should send empty prices as an explicit replacement", async () => {
+      mockClient.patch.mockResolvedValueOnce({
+        data: {
+          id: "po1",
+          type: "subscriptionPromotionalOffers",
+          attributes: {
+            name: "Offer",
+            offerCode: "X",
+            duration: "ONE_MONTH",
+            offerMode: "FREE_TRIAL",
+            numberOfPeriods: undefined,
+          },
+        },
+      });
+
+      await updatePromotionalOffer(mockClient as unknown as AppStoreConnectClient, {
+        promotionalOfferId: "po1",
+        prices: [],
+      });
+
+      expect(mockClient.patch).toHaveBeenCalledWith(
+        "/subscriptionPromotionalOffers/po1",
+        expect.objectContaining({
+          data: expect.objectContaining({
+            relationships: { prices: { data: [] } },
+          }),
+        })
+      );
+      expect(mockClient.patch.mock.calls[0][1]).not.toHaveProperty("included");
+    });
+
+    it("should require periodCount and prices when changing to a paid mode", async () => {
+      const result = await updatePromotionalOffer(mockClient as unknown as AppStoreConnectClient, {
+        promotionalOfferId: "po1",
+        offerMode: "PAY_AS_YOU_GO",
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: expect.objectContaining({ code: "VALIDATION_ERROR" }),
+      });
+      expect(mockClient.patch).not.toHaveBeenCalled();
     });
 
     it("should require promotionalOfferId", async () => {
-      const result = await updatePromotionalOffer(mockClient as unknown as AppStoreConnectClient, {});
-      expect(result).toEqual({ success: false, error: expect.objectContaining({ code: "VALIDATION_ERROR" }) });
+      const result = await updatePromotionalOffer(
+        mockClient as unknown as AppStoreConnectClient,
+        {}
+      );
+      expect(result).toEqual({
+        success: false,
+        error: expect.objectContaining({ code: "VALIDATION_ERROR" }),
+      });
     });
   });
 
@@ -1723,18 +1906,23 @@ describe("Subscription Tools", () => {
     it("should delete offer and return success", async () => {
       mockClient.delete.mockResolvedValueOnce(undefined);
 
-      const result = await deletePromotionalOffer(
-        mockClient as unknown as AppStoreConnectClient,
-        { promotionalOfferId: "po1" }
-      );
+      const result = await deletePromotionalOffer(mockClient as unknown as AppStoreConnectClient, {
+        promotionalOfferId: "po1",
+      });
 
       expect(mockClient.delete).toHaveBeenCalledWith("/subscriptionPromotionalOffers/po1");
       expect(result).toEqual({ success: true });
     });
 
     it("should require promotionalOfferId", async () => {
-      const result = await deletePromotionalOffer(mockClient as unknown as AppStoreConnectClient, {});
-      expect(result).toEqual({ success: false, error: expect.objectContaining({ code: "VALIDATION_ERROR" }) });
+      const result = await deletePromotionalOffer(
+        mockClient as unknown as AppStoreConnectClient,
+        {}
+      );
+      expect(result).toEqual({
+        success: false,
+        error: expect.objectContaining({ code: "VALIDATION_ERROR" }),
+      });
     });
   });
 
@@ -1757,7 +1945,11 @@ describe("Subscription Tools", () => {
           },
         ],
         included: [
-          { id: "pp1", type: "subscriptionPricePoints", attributes: { customerPrice: "0.49", proceeds: "0.34" } },
+          {
+            id: "pp1",
+            type: "subscriptionPricePoints",
+            attributes: { customerPrice: "0.49", proceeds: "0.34" },
+          },
           { id: "USA", type: "territories", attributes: { currency: "USD" } },
         ],
         meta: { paging: { total: 1 } },
@@ -1787,8 +1979,14 @@ describe("Subscription Tools", () => {
     });
 
     it("should require promotionalOfferId", async () => {
-      const result = await listPromotionalOfferPrices(mockClient as unknown as AppStoreConnectClient, {});
-      expect(result).toEqual({ success: false, error: expect.objectContaining({ code: "VALIDATION_ERROR" }) });
+      const result = await listPromotionalOfferPrices(
+        mockClient as unknown as AppStoreConnectClient,
+        {}
+      );
+      expect(result).toEqual({
+        success: false,
+        error: expect.objectContaining({ code: "VALIDATION_ERROR" }),
+      });
     });
   });
 });
