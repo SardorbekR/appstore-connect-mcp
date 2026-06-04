@@ -341,8 +341,20 @@ export async function downloadAnalyticsReportSegment(
       };
     }
 
-    const headers = lines[0]!.split("\t");
-    const dataLines = lines.slice(1);
+    const [headerLine, ...dataLines] = lines;
+    if (!headerLine) {
+      return {
+        success: true,
+        data: {
+          headers: [],
+          rows: [],
+          totalRows: 0,
+          truncated: false,
+        },
+      };
+    }
+
+    const headers = headerLine.split("\t");
     const totalRows = dataLines.length;
     const truncated = totalRows > maxRows;
     const limitedLines = truncated ? dataLines.slice(0, maxRows) : dataLines;
@@ -350,8 +362,8 @@ export async function downloadAnalyticsReportSegment(
     const rows: Record<string, string>[] = limitedLines.map((line) => {
       const values = line.split("\t");
       const row: Record<string, string> = {};
-      for (let i = 0; i < headers.length; i++) {
-        row[headers[i]!] = values[i] ?? "";
+      for (const [index, header] of headers.entries()) {
+        row[header] = values[index] ?? "";
       }
       return row;
     });

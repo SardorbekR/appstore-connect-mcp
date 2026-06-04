@@ -38,3 +38,4 @@ coverage/
 
 # MCP Registry tokens
 .mcpregistry_*
+.envrc

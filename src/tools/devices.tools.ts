@@ -94,6 +94,7 @@ export const devicesToolDefinitions = [
     name: "list_devices",
     description:
       "List all registered devices in App Store Connect. Can filter by platform and status.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -120,6 +121,7 @@ export const devicesToolDefinitions = [
   {
     name: "get_device",
     description: "Get details of a specific registered device.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {

@@ -213,6 +213,7 @@ export const categoriesToolDefinitions = [
   {
     name: "list_app_categories",
     description: "List all app categories available in the App Store. Can filter by platform.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -234,6 +235,7 @@ export const categoriesToolDefinitions = [
   {
     name: "get_app_price_schedule",
     description: "Get the price schedule for an app, including pricing information.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -249,6 +251,7 @@ export const categoriesToolDefinitions = [
     name: "get_app_availability",
     description:
       "Get app availability information, including which territories the app is available in.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {

@@ -5,6 +5,17 @@
 import type { AppStoreConnectClient } from "../api/client.js";
 
 import {
+  analyticsToolDefinitions,
+  createAnalyticsReportRequest,
+  deleteAnalyticsReportRequest,
+  downloadAnalyticsReportSegment,
+  getAnalyticsReportRequest,
+  listAnalyticsReportInstances,
+  listAnalyticsReportRequests,
+  listAnalyticsReportSegments,
+  listAnalyticsReports,
+} from "./analytics.tools.js";
+import {
   appInfoToolDefinitions,
   listAppInfoLocalizations,
   listAppInfos,
@@ -44,6 +55,13 @@ import {
   updateVersionLocalization,
 } from "./localizations.tools.js";
 import {
+  getAppPerfMetrics,
+  getBuildPerfMetrics,
+  listDiagnosticLogs,
+  listDiagnosticSignatures,
+  performanceToolDefinitions,
+} from "./performance.tools.js";
+import {
   getPricePointEqualizations,
   listAppPricePoints,
   listTerritories,
@@ -51,11 +69,46 @@ import {
   setAppPrices,
 } from "./pricing.tools.js";
 import {
+  getFinanceReport,
+  getSalesReport,
+  salesReportsToolDefinitions,
+} from "./sales-reports.tools.js";
+import {
   listScreenshotSets,
   listScreenshots,
   screenshotsToolDefinitions,
   uploadScreenshot,
 } from "./screenshots.tools.js";
+import {
+  createPromotionalOffer,
+  createSubscription,
+  createSubscriptionGroup,
+  createSubscriptionGroupLocalization,
+  createSubscriptionLocalization,
+  createSubscriptionPrice,
+  deletePromotionalOffer,
+  deleteSubscription,
+  deleteSubscriptionLocalization,
+  getSubscription,
+  getSubscriptionAvailability,
+  getSubscriptionGroup,
+  getSubscriptionGroupLocalization,
+  listPromotionalOfferPrices,
+  listPromotionalOffers,
+  listSubscriptionGroupLocalizations,
+  listSubscriptionGroups,
+  listSubscriptionLocalizations,
+  listSubscriptionPricePoints,
+  listSubscriptionPrices,
+  listSubscriptions,
+  setSubscriptionAvailability,
+  subscriptionToolDefinitions,
+  updatePromotionalOffer,
+  updateSubscription,
+  updateSubscriptionGroup,
+  updateSubscriptionGroupLocalization,
+  updateSubscriptionLocalization,
+} from "./subscriptions.tools.js";
 import { getUser, listUsers, usersToolDefinitions } from "./users.tools.js";
 import {
   createAppVersion,
@@ -63,29 +116,6 @@ import {
   listAppVersions,
   versionsToolDefinitions,
 } from "./versions.tools.js";
-import {
-  analyticsToolDefinitions,
-  createAnalyticsReportRequest,
-  deleteAnalyticsReportRequest,
-  downloadAnalyticsReportSegment,
-  getAnalyticsReportRequest,
-  listAnalyticsReportInstances,
-  listAnalyticsReportRequests,
-  listAnalyticsReportSegments,
-  listAnalyticsReports,
-} from "./analytics.tools.js";
-import {
-  getFinanceReport,
-  getSalesReport,
-  salesReportsToolDefinitions,
-} from "./sales-reports.tools.js";
-import {
-  getAppPerfMetrics,
-  getBuildPerfMetrics,
-  listDiagnosticLogs,
-  listDiagnosticSignatures,
-  performanceToolDefinitions,
-} from "./performance.tools.js";
 
 // Tool handler type
 type ToolHandler = (client: AppStoreConnectClient, input: unknown) => Promise<unknown>;
@@ -154,6 +184,35 @@ const toolHandlers: Record<string, ToolHandler> = {
   get_price_point_equalizations: getPricePointEqualizations,
   set_app_prices: setAppPrices,
 
+  // Subscriptions
+  list_subscription_groups: listSubscriptionGroups,
+  get_subscription_group: getSubscriptionGroup,
+  create_subscription_group: createSubscriptionGroup,
+  list_subscriptions: listSubscriptions,
+  get_subscription: getSubscription,
+  create_subscription: createSubscription,
+  update_subscription: updateSubscription,
+  delete_subscription: deleteSubscription,
+  list_subscription_localizations: listSubscriptionLocalizations,
+  create_subscription_localization: createSubscriptionLocalization,
+  update_subscription_localization: updateSubscriptionLocalization,
+  delete_subscription_localization: deleteSubscriptionLocalization,
+  list_subscription_price_points: listSubscriptionPricePoints,
+  update_subscription_group: updateSubscriptionGroup,
+  list_subscription_group_localizations: listSubscriptionGroupLocalizations,
+  get_subscription_group_localization: getSubscriptionGroupLocalization,
+  create_subscription_group_localization: createSubscriptionGroupLocalization,
+  update_subscription_group_localization: updateSubscriptionGroupLocalization,
+  list_promotional_offers: listPromotionalOffers,
+  create_promotional_offer: createPromotionalOffer,
+  update_promotional_offer: updatePromotionalOffer,
+  delete_promotional_offer: deletePromotionalOffer,
+  list_promotional_offer_prices: listPromotionalOfferPrices,
+  list_subscription_prices: listSubscriptionPrices,
+  get_subscription_availability: getSubscriptionAvailability,
+  set_subscription_availability: setSubscriptionAvailability,
+  create_subscription_price: createSubscriptionPrice,
+
   // Analytics
   create_analytics_report_request: createAnalyticsReportRequest,
   list_analytics_report_requests: listAnalyticsReportRequests,
@@ -189,6 +248,7 @@ export const allToolDefinitions = [
   ...buildsToolDefinitions,
   ...categoriesToolDefinitions,
   ...pricingToolDefinitions,
+  ...subscriptionToolDefinitions,
   ...analyticsToolDefinitions,
   ...salesReportsToolDefinitions,
   ...performanceToolDefinitions,

@@ -290,7 +290,9 @@ describe("AppStoreConnectClient", () => {
       };
       mockFetch.mockResolvedValueOnce(mockResponse);
 
-      const result = await client.requestRaw("/salesReports", { params: { "filter[vendorNumber]": "123" } });
+      const result = await client.requestRaw("/salesReports", {
+        params: { "filter[vendorNumber]": "123" },
+      });
 
       expect(result).toBe(mockResponse);
     });

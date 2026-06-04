@@ -5,10 +5,7 @@
 import { gzipSync } from "node:zlib";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppStoreConnectClient } from "../src/api/client.js";
-import {
-  getFinanceReport,
-  getSalesReport,
-} from "../src/tools/sales-reports.tools.js";
+import { getFinanceReport, getSalesReport } from "../src/tools/sales-reports.tools.js";
 
 // Create mock client
 const createMockClient = () => ({
@@ -30,10 +27,7 @@ function mockGzipResponse(tsvContent: string) {
     ok: true,
     status: 200,
     arrayBuffer: async () =>
-      gzipped.buffer.slice(
-        gzipped.byteOffset,
-        gzipped.byteOffset + gzipped.byteLength
-      ),
+      gzipped.buffer.slice(gzipped.byteOffset, gzipped.byteOffset + gzipped.byteLength),
   };
 }
 
@@ -56,16 +50,13 @@ describe("Sales & Finance Report Tools", () => {
 
       mockClient.requestRaw.mockResolvedValueOnce(mockGzipResponse(tsvContent));
 
-      const result = await getSalesReport(
-        mockClient as unknown as AppStoreConnectClient,
-        {
-          vendorNumber: "88888888",
-          reportType: "SALES",
-          reportSubType: "SUMMARY",
-          frequency: "DAILY",
-          reportDate: "2024-01-15",
-        }
-      );
+      const result = await getSalesReport(mockClient as unknown as AppStoreConnectClient, {
+        vendorNumber: "88888888",
+        reportType: "SALES",
+        reportSubType: "SUMMARY",
+        frequency: "DAILY",
+        reportDate: "2024-01-15",
+      });
 
       expect(result).toEqual({
         success: true,
@@ -130,25 +121,23 @@ describe("Sales & Finance Report Tools", () => {
     it("should truncate rows when maxRows is specified", async () => {
       // Build TSV with 5 data rows
       const headerRow = "Col1\tCol2";
-      const dataRows = Array.from(
-        { length: 5 },
-        (_, i) => `val${i + 1}\tdata${i + 1}`
-      );
+      const dataRows = Array.from({ length: 5 }, (_, i) => `val${i + 1}\tdata${i + 1}`);
       const tsvContent = [headerRow, ...dataRows].join("\n");
 
       mockClient.requestRaw.mockResolvedValueOnce(mockGzipResponse(tsvContent));
 
-      const result = (await getSalesReport(
-        mockClient as unknown as AppStoreConnectClient,
-        {
-          vendorNumber: "88888888",
-          reportType: "SALES",
-          reportSubType: "SUMMARY",
-          frequency: "DAILY",
-          reportDate: "2024-01-15",
-          maxRows: 3,
-        }
-      )) as { success: boolean; data: unknown[]; meta: { totalRows: number; returned: number; truncated: boolean } };
+      const result = (await getSalesReport(mockClient as unknown as AppStoreConnectClient, {
+        vendorNumber: "88888888",
+        reportType: "SALES",
+        reportSubType: "SUMMARY",
+        frequency: "DAILY",
+        reportDate: "2024-01-15",
+        maxRows: 3,
+      })) as {
+        success: boolean;
+        data: unknown[];
+        meta: { totalRows: number; returned: number; truncated: boolean };
+      };
 
       expect(result.success).toBe(true);
       expect(result.data).toHaveLength(3);
@@ -158,13 +147,10 @@ describe("Sales & Finance Report Tools", () => {
     });
 
     it("should return validation error when required fields are missing", async () => {
-      const result = await getSalesReport(
-        mockClient as unknown as AppStoreConnectClient,
-        {
-          vendorNumber: "88888888",
-          // missing reportType, reportSubType, frequency, reportDate
-        }
-      );
+      const result = await getSalesReport(mockClient as unknown as AppStoreConnectClient, {
+        vendorNumber: "88888888",
+        // missing reportType, reportSubType, frequency, reportDate
+      });
 
       expect(result).toEqual({
         success: false,
@@ -175,16 +161,13 @@ describe("Sales & Finance Report Tools", () => {
     });
 
     it("should return validation error for non-numeric vendorNumber", async () => {
-      const result = await getSalesReport(
-        mockClient as unknown as AppStoreConnectClient,
-        {
-          vendorNumber: "abc",
-          reportType: "SALES",
-          reportSubType: "SUMMARY",
-          frequency: "DAILY",
-          reportDate: "2024-01-15",
-        }
-      );
+      const result = await getSalesReport(mockClient as unknown as AppStoreConnectClient, {
+        vendorNumber: "abc",
+        reportType: "SALES",
+        reportSubType: "SUMMARY",
+        frequency: "DAILY",
+        reportDate: "2024-01-15",
+      });
 
       expect(result).toEqual({
         success: false,
@@ -195,16 +178,13 @@ describe("Sales & Finance Report Tools", () => {
     });
 
     it("should return validation error for invalid reportType", async () => {
-      const result = await getSalesReport(
-        mockClient as unknown as AppStoreConnectClient,
-        {
-          vendorNumber: "88888888",
-          reportType: "INVALID",
-          reportSubType: "SUMMARY",
-          frequency: "DAILY",
-          reportDate: "2024-01-15",
-        }
-      );
+      const result = await getSalesReport(mockClient as unknown as AppStoreConnectClient, {
+        vendorNumber: "88888888",
+        reportType: "INVALID",
+        reportSubType: "SUMMARY",
+        frequency: "DAILY",
+        reportDate: "2024-01-15",
+      });
 
       expect(result).toEqual({
         success: false,
@@ -227,15 +207,12 @@ describe("Sales & Finance Report Tools", () => {
 
       mockClient.requestRaw.mockResolvedValueOnce(mockGzipResponse(tsvContent));
 
-      const result = await getFinanceReport(
-        mockClient as unknown as AppStoreConnectClient,
-        {
-          vendorNumber: "88888888",
-          regionCode: "US",
-          reportDate: "2024-01",
-          reportType: "FINANCIAL",
-        }
-      );
+      const result = await getFinanceReport(mockClient as unknown as AppStoreConnectClient, {
+        vendorNumber: "88888888",
+        regionCode: "US",
+        reportDate: "2024-01",
+        reportType: "FINANCIAL",
+      });
 
       expect(result).toEqual({
         success: true,
@@ -287,15 +264,12 @@ describe("Sales & Finance Report Tools", () => {
     });
 
     it("should return validation error for invalid reportDate format", async () => {
-      const result = await getFinanceReport(
-        mockClient as unknown as AppStoreConnectClient,
-        {
-          vendorNumber: "88888888",
-          regionCode: "US",
-          reportDate: "2024-01-15", // must be YYYY-MM, not YYYY-MM-DD
-          reportType: "FINANCIAL",
-        }
-      );
+      const result = await getFinanceReport(mockClient as unknown as AppStoreConnectClient, {
+        vendorNumber: "88888888",
+        regionCode: "US",
+        reportDate: "2024-01-15", // must be YYYY-MM, not YYYY-MM-DD
+        reportType: "FINANCIAL",
+      });
 
       expect(result).toEqual({
         success: false,
@@ -306,13 +280,10 @@ describe("Sales & Finance Report Tools", () => {
     });
 
     it("should return validation error when required fields are missing", async () => {
-      const result = await getFinanceReport(
-        mockClient as unknown as AppStoreConnectClient,
-        {
-          vendorNumber: "88888888",
-          // missing regionCode, reportDate, reportType
-        }
-      );
+      const result = await getFinanceReport(mockClient as unknown as AppStoreConnectClient, {
+        vendorNumber: "88888888",
+        // missing regionCode, reportDate, reportType
+      });
 
       expect(result).toEqual({
         success: false,
@@ -323,15 +294,12 @@ describe("Sales & Finance Report Tools", () => {
     });
 
     it("should return validation error for invalid reportType", async () => {
-      const result = await getFinanceReport(
-        mockClient as unknown as AppStoreConnectClient,
-        {
-          vendorNumber: "88888888",
-          regionCode: "US",
-          reportDate: "2024-01",
-          reportType: "INVALID_TYPE",
-        }
-      );
+      const result = await getFinanceReport(mockClient as unknown as AppStoreConnectClient, {
+        vendorNumber: "88888888",
+        regionCode: "US",
+        reportDate: "2024-01",
+        reportType: "INVALID_TYPE",
+      });
 
       expect(result).toEqual({
         success: false,
@@ -343,24 +311,22 @@ describe("Sales & Finance Report Tools", () => {
 
     it("should truncate rows when maxRows is specified", async () => {
       const headerRow = "Col1\tCol2\tCol3";
-      const dataRows = Array.from(
-        { length: 10 },
-        (_, i) => `a${i + 1}\tb${i + 1}\tc${i + 1}`
-      );
+      const dataRows = Array.from({ length: 10 }, (_, i) => `a${i + 1}\tb${i + 1}\tc${i + 1}`);
       const tsvContent = [headerRow, ...dataRows].join("\n");
 
       mockClient.requestRaw.mockResolvedValueOnce(mockGzipResponse(tsvContent));
 
-      const result = (await getFinanceReport(
-        mockClient as unknown as AppStoreConnectClient,
-        {
-          vendorNumber: "88888888",
-          regionCode: "US",
-          reportDate: "2024-01",
-          reportType: "FINANCIAL",
-          maxRows: 5,
-        }
-      )) as { success: boolean; data: unknown[]; meta: { totalRows: number; returned: number; truncated: boolean } };
+      const result = (await getFinanceReport(mockClient as unknown as AppStoreConnectClient, {
+        vendorNumber: "88888888",
+        regionCode: "US",
+        reportDate: "2024-01",
+        reportType: "FINANCIAL",
+        maxRows: 5,
+      })) as {
+        success: boolean;
+        data: unknown[];
+        meta: { totalRows: number; returned: number; truncated: boolean };
+      };
 
       expect(result.success).toBe(true);
       expect(result.data).toHaveLength(5);

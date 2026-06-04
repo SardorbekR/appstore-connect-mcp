@@ -161,10 +161,10 @@ describe("Analytics Tools", () => {
         meta: { paging: { total: 0 } },
       });
 
-      await listAnalyticsReportRequests(
-        mockClient as unknown as AppStoreConnectClient,
-        { appId: "123456", limit: 50 }
-      );
+      await listAnalyticsReportRequests(mockClient as unknown as AppStoreConnectClient, {
+        appId: "123456",
+        limit: 50,
+      });
 
       expect(mockClient.get).toHaveBeenCalledWith(
         "/apps/123456/analyticsReportRequests",
@@ -288,10 +288,9 @@ describe("Analytics Tools", () => {
         meta: { paging: { total: 2 } },
       });
 
-      const result = await listAnalyticsReports(
-        mockClient as unknown as AppStoreConnectClient,
-        { requestId: "REQ001" }
-      );
+      const result = await listAnalyticsReports(mockClient as unknown as AppStoreConnectClient, {
+        requestId: "REQ001",
+      });
 
       expect(result).toEqual({
         success: true,
@@ -339,10 +338,7 @@ describe("Analytics Tools", () => {
     });
 
     it("should require requestId parameter", async () => {
-      const result = await listAnalyticsReports(
-        mockClient as unknown as AppStoreConnectClient,
-        {}
-      );
+      const result = await listAnalyticsReports(mockClient as unknown as AppStoreConnectClient, {});
 
       expect(result).toEqual({
         success: false,
@@ -398,10 +394,10 @@ describe("Analytics Tools", () => {
         meta: { paging: { total: 0 } },
       });
 
-      await listAnalyticsReportInstances(
-        mockClient as unknown as AppStoreConnectClient,
-        { reportId: "RPT001", granularity: "MONTHLY" }
-      );
+      await listAnalyticsReportInstances(mockClient as unknown as AppStoreConnectClient, {
+        reportId: "RPT001",
+        granularity: "MONTHLY",
+      });
 
       expect(mockClient.get).toHaveBeenCalledWith(
         "/analyticsReports/RPT001/instances",
@@ -417,10 +413,10 @@ describe("Analytics Tools", () => {
         meta: { paging: { total: 0 } },
       });
 
-      await listAnalyticsReportInstances(
-        mockClient as unknown as AppStoreConnectClient,
-        { reportId: "RPT001", processingDate: "2024-01-15" }
-      );
+      await listAnalyticsReportInstances(mockClient as unknown as AppStoreConnectClient, {
+        reportId: "RPT001",
+        processingDate: "2024-01-15",
+      });
 
       expect(mockClient.get).toHaveBeenCalledWith(
         "/analyticsReports/RPT001/instances",
@@ -436,10 +432,9 @@ describe("Analytics Tools", () => {
         meta: { paging: { total: 0 } },
       });
 
-      await listAnalyticsReportInstances(
-        mockClient as unknown as AppStoreConnectClient,
-        { reportId: "RPT555" }
-      );
+      await listAnalyticsReportInstances(mockClient as unknown as AppStoreConnectClient, {
+        reportId: "RPT555",
+      });
 
       expect(mockClient.get).toHaveBeenCalledWith(
         "/analyticsReports/RPT555/instances",
@@ -519,10 +514,10 @@ describe("Analytics Tools", () => {
         meta: { paging: { total: 0 } },
       });
 
-      await listAnalyticsReportSegments(
-        mockClient as unknown as AppStoreConnectClient,
-        { instanceId: "INST001", limit: 10 }
-      );
+      await listAnalyticsReportSegments(mockClient as unknown as AppStoreConnectClient, {
+        instanceId: "INST001",
+        limit: 10,
+      });
 
       expect(mockClient.get).toHaveBeenCalledWith(
         "/analyticsReportInstances/INST001/segments",
@@ -547,15 +542,19 @@ describe("Analytics Tools", () => {
 
   describe("downloadAnalyticsReportSegment", () => {
     it("should download, decompress, and parse TSV data", async () => {
-      const tsvContent = "Date\tMetric\tValue\n2024-01-15\tSessions\t1500\n2024-01-16\tSessions\t1600";
+      const tsvContent =
+        "Date\tMetric\tValue\n2024-01-15\tSessions\t1500\n2024-01-16\tSessions\t1600";
       const gzippedBuffer = gzipSync(Buffer.from(tsvContent));
 
       mockClient.rawRequest.mockResolvedValueOnce({
         ok: true,
-        arrayBuffer: () => Promise.resolve(gzippedBuffer.buffer.slice(
-          gzippedBuffer.byteOffset,
-          gzippedBuffer.byteOffset + gzippedBuffer.byteLength
-        )),
+        arrayBuffer: () =>
+          Promise.resolve(
+            gzippedBuffer.buffer.slice(
+              gzippedBuffer.byteOffset,
+              gzippedBuffer.byteOffset + gzippedBuffer.byteLength
+            )
+          ),
       });
 
       const result = await downloadAnalyticsReportSegment(
@@ -576,10 +575,9 @@ describe("Analytics Tools", () => {
         },
       });
 
-      expect(mockClient.rawRequest).toHaveBeenCalledWith(
-        "https://example.com/segment.tsv.gz",
-        { method: "GET" }
-      );
+      expect(mockClient.rawRequest).toHaveBeenCalledWith("https://example.com/segment.tsv.gz", {
+        method: "GET",
+      });
     });
 
     it("should truncate rows when exceeding maxRows", async () => {
@@ -592,16 +590,27 @@ describe("Analytics Tools", () => {
 
       mockClient.rawRequest.mockResolvedValueOnce({
         ok: true,
-        arrayBuffer: () => Promise.resolve(gzippedBuffer.buffer.slice(
-          gzippedBuffer.byteOffset,
-          gzippedBuffer.byteOffset + gzippedBuffer.byteLength
-        )),
+        arrayBuffer: () =>
+          Promise.resolve(
+            gzippedBuffer.buffer.slice(
+              gzippedBuffer.byteOffset,
+              gzippedBuffer.byteOffset + gzippedBuffer.byteLength
+            )
+          ),
       });
 
       const result = (await downloadAnalyticsReportSegment(
         mockClient as unknown as AppStoreConnectClient,
         { url: "https://example.com/segment.tsv.gz", maxRows: 3 }
-      )) as { success: boolean; data: { headers: string[]; rows: Record<string, string>[]; totalRows: number; truncated: boolean } };
+      )) as {
+        success: boolean;
+        data: {
+          headers: string[];
+          rows: Record<string, string>[];
+          totalRows: number;
+          truncated: boolean;
+        };
+      };
 
       expect(result.success).toBe(true);
       expect(result.data.totalRows).toBe(10);
@@ -680,16 +689,22 @@ describe("Analytics Tools", () => {
 
       mockClient.rawRequest.mockResolvedValueOnce({
         ok: true,
-        arrayBuffer: () => Promise.resolve(gzippedBuffer.buffer.slice(
-          gzippedBuffer.byteOffset,
-          gzippedBuffer.byteOffset + gzippedBuffer.byteLength
-        )),
+        arrayBuffer: () =>
+          Promise.resolve(
+            gzippedBuffer.buffer.slice(
+              gzippedBuffer.byteOffset,
+              gzippedBuffer.byteOffset + gzippedBuffer.byteLength
+            )
+          ),
       });
 
       const result = (await downloadAnalyticsReportSegment(
         mockClient as unknown as AppStoreConnectClient,
         { url: "https://example.com/large.tsv.gz" }
-      )) as { success: boolean; data: { rows: Record<string, string>[]; totalRows: number; truncated: boolean } };
+      )) as {
+        success: boolean;
+        data: { rows: Record<string, string>[]; totalRows: number; truncated: boolean };
+      };
 
       expect(result.success).toBe(true);
       expect(result.data.totalRows).toBe(150);

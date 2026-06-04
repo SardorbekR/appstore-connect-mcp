@@ -562,10 +562,7 @@ describe("Performance Tools", () => {
     });
 
     it("should return validation error when signatureId is missing", async () => {
-      const result = await listDiagnosticLogs(
-        mockClient as unknown as AppStoreConnectClient,
-        {}
-      );
+      const result = await listDiagnosticLogs(mockClient as unknown as AppStoreConnectClient, {});
 
       expect(result).toEqual({
         success: false,

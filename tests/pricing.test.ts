@@ -98,10 +98,9 @@ describe("Pricing Tools", () => {
         meta: { paging: { total: 1 } },
       });
 
-      const result = await listAppPricePoints(
-        mockClient as unknown as AppStoreConnectClient,
-        { appId: "123456" }
-      );
+      const result = await listAppPricePoints(mockClient as unknown as AppStoreConnectClient, {
+        appId: "123456",
+      });
 
       expect(result).toEqual({
         success: true,
@@ -137,10 +136,7 @@ describe("Pricing Tools", () => {
     });
 
     it("should require appId parameter", async () => {
-      const result = await listAppPricePoints(
-        mockClient as unknown as AppStoreConnectClient,
-        {}
-      );
+      const result = await listAppPricePoints(mockClient as unknown as AppStoreConnectClient, {});
 
       expect(result).toEqual({
         success: false,
@@ -166,10 +162,9 @@ describe("Pricing Tools", () => {
         meta: { paging: { total: 1 } },
       });
 
-      const result = await listAppPricePoints(
-        mockClient as unknown as AppStoreConnectClient,
-        { appId: "123456" }
-      );
+      const result = await listAppPricePoints(mockClient as unknown as AppStoreConnectClient, {
+        appId: "123456",
+      });
 
       expect(result).toEqual({
         success: true,
