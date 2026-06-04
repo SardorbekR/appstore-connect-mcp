@@ -771,7 +771,9 @@ function indexPricingIncludes(included: Array<SubscriptionPricePoint | Territory
       continue;
     }
 
-    territoryMap.set(item.id, item as Territory);
+    if (item.type === "territories") {
+      territoryMap.set(item.id, item as Territory);
+    }
   }
 
   return { pricePointMap, territoryMap };

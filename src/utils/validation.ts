@@ -607,6 +607,52 @@ function isPaidPromotionalOfferMode(offerMode: string | undefined): boolean {
   return offerMode === "PAY_AS_YOU_GO" || offerMode === "PAY_UP_FRONT";
 }
 
+function addDuplicatePromotionalOfferTerritoryIssues(
+  prices: Array<{ territory: string; pricePointId: string }> | undefined,
+  ctx: z.RefinementCtx
+): void {
+  if (!prices) return;
+
+  const seen = new Set<string>();
+  for (const [index, price] of prices.entries()) {
+    if (!seen.has(price.territory)) {
+      seen.add(price.territory);
+      continue;
+    }
+
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Each promotional offer price must use a unique territory",
+      path: ["prices", index, "territory"],
+    });
+  }
+}
+
+function addPromotionalOfferModeIssues(
+  offerMode: z.infer<typeof subscriptionOfferModeSchema> | undefined,
+  periodCount: number | undefined,
+  prices: Array<{ territory: string; pricePointId: string }> | undefined,
+  ctx: z.RefinementCtx
+): void {
+  if (!isPaidPromotionalOfferMode(offerMode)) return;
+
+  if (periodCount === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Period count is required for paid promotional offers",
+      path: ["periodCount"],
+    });
+  }
+
+  if (!prices || prices.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "At least one price is required for paid promotional offers",
+      path: ["prices"],
+    });
+  }
+}
+
 // List promotional offers input
 export const listPromotionalOffersInputSchema = z.object({
   subscriptionId: z.string().min(1, "Subscription ID is required"),
@@ -625,23 +671,8 @@ export const createPromotionalOfferInputSchema = z
     prices: z.array(promotionalOfferPriceEntrySchema).optional(),
   })
   .superRefine((params, ctx) => {
-    if (!isPaidPromotionalOfferMode(params.offerMode)) return;
-
-    if (params.periodCount === undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Period count is required for paid promotional offers",
-        path: ["periodCount"],
-      });
-    }
-
-    if (!params.prices || params.prices.length === 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "At least one price is required for paid promotional offers",
-        path: ["prices"],
-      });
-    }
+    addPromotionalOfferModeIssues(params.offerMode, params.periodCount, params.prices, ctx);
+    addDuplicatePromotionalOfferTerritoryIssues(params.prices, ctx);
   });
 
 // Update promotional offer input
@@ -656,23 +687,8 @@ export const updatePromotionalOfferInputSchema = z
     prices: z.array(promotionalOfferPriceEntrySchema).optional(),
   })
   .superRefine((params, ctx) => {
-    if (!isPaidPromotionalOfferMode(params.offerMode)) return;
-
-    if (params.periodCount === undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Period count is required for paid promotional offers",
-        path: ["periodCount"],
-      });
-    }
-
-    if (!params.prices || params.prices.length === 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "At least one price is required for paid promotional offers",
-        path: ["prices"],
-      });
-    }
+    addPromotionalOfferModeIssues(params.offerMode, params.periodCount, params.prices, ctx);
+    addDuplicatePromotionalOfferTerritoryIssues(params.prices, ctx);
   });
 
 // Delete promotional offer input
