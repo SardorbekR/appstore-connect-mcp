@@ -19,6 +19,7 @@ A Model Context Protocol (MCP) server for Apple's App Store Connect API. Manage 
 - **Build Management** - List and inspect app builds
 - **Category & Pricing** - Browse categories, check pricing and availability
 - **Pricing & PPP** - Set per-territory pricing with Purchase Power Parity support
+- **In-App Purchases** - Create and manage one-time purchases (lifetime/non-consumable, consumable, non-renewing): metadata, localization, pricing, availability, and review submission
 - **Secure by Default** - ES256 JWT auth with automatic token refresh, credential redaction in logs
 
 ## Table of Contents
@@ -286,6 +287,29 @@ For CI/CD or containerized environments, you can pass the key content directly:
 | `list_app_price_points` | List available price tiers for an app | `appId`, `territory?`, `limit?` |
 | `get_price_point_equalizations` | Get PPP equivalent prices across countries | `pricePointId`, `territories?`, `limit?` |
 | `set_app_prices` | Set per-territory manual pricing (replaces entire schedule) | `appId`, `baseTerritory`, `manualPrices` |
+
+### In-App Purchases (Lifetime / Non-Consumable)
+
+One-time purchases via Apple's In-App Purchases v2 API. `create_in_app_purchase` defaults to `NON_CONSUMABLE` — a "lifetime" unlock. To ship one: create → add a localization → set a price → set availability → submit for review.
+
+> **Note:** App Review usually requires a review screenshot on the in-app purchase. Uploading IAP review screenshots is not yet covered by these tools — add one in App Store Connect if `submit_in_app_purchase_for_review` is rejected for a missing screenshot.
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `list_in_app_purchases` | List an app's in-app purchases, optionally by type | `appId`, `inAppPurchaseType?`, `limit?` |
+| `get_in_app_purchase` | Get a single in-app purchase's details and state | `inAppPurchaseId` |
+| `create_in_app_purchase` | Create an IAP (defaults to NON_CONSUMABLE / lifetime) | `appId`, `name`, `productId`, `inAppPurchaseType?`, `familySharable?`, `reviewNote?` |
+| `update_in_app_purchase` | Update name, Family Sharing, or review note (productId/type immutable) | `inAppPurchaseId`, `name?`, `familySharable?`, `reviewNote?` |
+| `delete_in_app_purchase` | Delete an in-app purchase | `inAppPurchaseId` |
+| `list_in_app_purchase_localizations` | List localized names/descriptions | `inAppPurchaseId`, `limit?` |
+| `create_in_app_purchase_localization` | Add a localized display name (+ description) | `inAppPurchaseId`, `locale`, `name`, `description?` |
+| `update_in_app_purchase_localization` | Update a localization | `localizationId`, `name?`, `description?` |
+| `delete_in_app_purchase_localization` | Delete a localization | `localizationId` |
+| `list_in_app_purchase_price_points` | List price points (customer price & proceeds) | `inAppPurchaseId`, `territory?`, `limit?`, `offset?` |
+| `set_in_app_purchase_price` | Set pricing (replaces schedule; one base territory to auto-equalize, or full PPP list) | `inAppPurchaseId`, `baseTerritory`, `manualPrices` |
+| `get_in_app_purchase_availability` | Get territory availability | `inAppPurchaseId` |
+| `set_in_app_purchase_availability` | Set territory availability | `inAppPurchaseId`, `availableInNewTerritories`, `territories?` |
+| `submit_in_app_purchase_for_review` | Submit the IAP to App Review (independent of an app version) | `inAppPurchaseId` |
 
 ## Usage Examples
 
