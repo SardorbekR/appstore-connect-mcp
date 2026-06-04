@@ -47,6 +47,23 @@ import {
 } from "./categories.tools.js";
 import { devicesToolDefinitions, getDevice, listDevices } from "./devices.tools.js";
 import {
+  createInAppPurchase,
+  createInAppPurchaseLocalization,
+  deleteInAppPurchase,
+  deleteInAppPurchaseLocalization,
+  getInAppPurchase,
+  getInAppPurchaseAvailability,
+  inAppPurchaseToolDefinitions,
+  listInAppPurchaseLocalizations,
+  listInAppPurchasePricePoints,
+  listInAppPurchases,
+  setInAppPurchaseAvailability,
+  setInAppPurchasePrice,
+  submitInAppPurchaseForReview,
+  updateInAppPurchase,
+  updateInAppPurchaseLocalization,
+} from "./in-app-purchases.tools.js";
+import {
   createVersionLocalization,
   deleteVersionLocalization,
   getVersionLocalization,
@@ -213,6 +230,22 @@ const toolHandlers: Record<string, ToolHandler> = {
   set_subscription_availability: setSubscriptionAvailability,
   create_subscription_price: createSubscriptionPrice,
 
+  // In-App Purchases (lifetime / non-consumable)
+  list_in_app_purchases: listInAppPurchases,
+  get_in_app_purchase: getInAppPurchase,
+  create_in_app_purchase: createInAppPurchase,
+  update_in_app_purchase: updateInAppPurchase,
+  delete_in_app_purchase: deleteInAppPurchase,
+  list_in_app_purchase_localizations: listInAppPurchaseLocalizations,
+  create_in_app_purchase_localization: createInAppPurchaseLocalization,
+  update_in_app_purchase_localization: updateInAppPurchaseLocalization,
+  delete_in_app_purchase_localization: deleteInAppPurchaseLocalization,
+  list_in_app_purchase_price_points: listInAppPurchasePricePoints,
+  set_in_app_purchase_price: setInAppPurchasePrice,
+  get_in_app_purchase_availability: getInAppPurchaseAvailability,
+  set_in_app_purchase_availability: setInAppPurchaseAvailability,
+  submit_in_app_purchase_for_review: submitInAppPurchaseForReview,
+
   // Analytics
   create_analytics_report_request: createAnalyticsReportRequest,
   list_analytics_report_requests: listAnalyticsReportRequests,
@@ -249,6 +282,7 @@ export const allToolDefinitions = [
   ...categoriesToolDefinitions,
   ...pricingToolDefinitions,
   ...subscriptionToolDefinitions,
+  ...inAppPurchaseToolDefinitions,
   ...analyticsToolDefinitions,
   ...salesReportsToolDefinitions,
   ...performanceToolDefinitions,
