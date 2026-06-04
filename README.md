@@ -19,6 +19,7 @@ A Model Context Protocol (MCP) server for Apple's App Store Connect API. Manage 
 - **Build Management** - List and inspect app builds
 - **Category & Pricing** - Browse categories, check pricing and availability
 - **Pricing & PPP** - Set per-territory pricing with Purchase Power Parity support
+- **Subscriptions** - Create and manage auto-renewable subscriptions, groups, localizations, prices, availability, and promotional offers
 - **In-App Purchases** - Create and manage one-time purchases (lifetime/non-consumable, consumable, non-renewing): metadata, localization, pricing, availability, and review submission
 - **Secure by Default** - ES256 JWT auth with automatic token refresh, credential redaction in logs
 
@@ -287,6 +288,40 @@ For CI/CD or containerized environments, you can pass the key content directly:
 | `list_app_price_points` | List available price tiers for an app | `appId`, `territory?`, `limit?` |
 | `get_price_point_equalizations` | Get PPP equivalent prices across countries | `pricePointId`, `territories?`, `limit?` |
 | `set_app_prices` | Set per-territory manual pricing (replaces entire schedule) | `appId`, `baseTerritory`, `manualPrices` |
+
+### Subscriptions
+
+Auto-renewable subscriptions via App Store Connect. To ship one: create a subscription group, create a subscription, add localizations, choose price points, set prices and availability, then configure promotional offers as needed.
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `list_subscription_groups` | List subscription groups for an app | `appId`, `limit?` |
+| `get_subscription_group` | Get a subscription group | `subscriptionGroupId` |
+| `create_subscription_group` | Create a subscription group | `appId`, `referenceName` |
+| `update_subscription_group` | Update a subscription group reference name | `subscriptionGroupId`, `referenceName` |
+| `list_subscription_group_localizations` | List subscription group localizations | `subscriptionGroupId`, `limit?` |
+| `get_subscription_group_localization` | Get a subscription group localization | `localizationId` |
+| `create_subscription_group_localization` | Create a subscription group localization | `subscriptionGroupId`, `name`, `locale`, `customAppName?`, `customAppDescription?` |
+| `update_subscription_group_localization` | Update a subscription group localization | `localizationId`, `name?`, `customAppName?`, `customAppDescription?` |
+| `list_subscriptions` | List subscriptions in a group | `subscriptionGroupId`, `limit?` |
+| `get_subscription` | Get a subscription | `subscriptionId` |
+| `create_subscription` | Create an auto-renewable subscription | `subscriptionGroupId`, `name`, `productId`, `subscriptionPeriod`, `familySharable?`, `reviewNote?`, `groupLevel?` |
+| `update_subscription` | Update subscription metadata | `subscriptionId`, `name?`, `familySharable?`, `subscriptionPeriod?`, `reviewNote?`, `groupLevel?` |
+| `delete_subscription` | Delete a subscription | `subscriptionId` |
+| `list_subscription_localizations` | List subscription localizations | `subscriptionId`, `limit?` |
+| `create_subscription_localization` | Create a subscription localization | `subscriptionId`, `name`, `locale`, `description?` |
+| `update_subscription_localization` | Update a subscription localization | `localizationId`, `name?`, `description?` |
+| `delete_subscription_localization` | Delete a subscription localization | `localizationId` |
+| `list_subscription_price_points` | List subscription price points | `subscriptionId`, `territory?`, `limit?`, `offset?` |
+| `list_subscription_prices` | List current subscription prices | `subscriptionId`, `territory?`, `limit?` |
+| `get_subscription_availability` | Get subscription territory availability | `subscriptionId` |
+| `set_subscription_availability` | Set subscription territory availability | `subscriptionId`, `availableInNewTerritories`, `territories?` |
+| `create_subscription_price` | Set a subscription price | `subscriptionId`, `subscriptionPricePointId`, `startDate?`, `preserveCurrentPrice?` |
+| `list_promotional_offers` | List promotional offers | `subscriptionId`, `limit?` |
+| `create_promotional_offer` | Create a promotional offer | `subscriptionId`, `name`, `offerCode`, `duration`, `offerMode`, `periodCount?`, `prices?` |
+| `update_promotional_offer` | Update a promotional offer | `promotionalOfferId`, `name?`, `offerCode?`, `duration?`, `offerMode?`, `periodCount?`, `prices?` |
+| `delete_promotional_offer` | Delete a promotional offer | `promotionalOfferId` |
+| `list_promotional_offer_prices` | List promotional offer prices | `promotionalOfferId`, `limit?` |
 
 ### In-App Purchases (Lifetime / Non-Consumable)
 
