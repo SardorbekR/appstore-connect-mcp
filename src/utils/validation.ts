@@ -855,3 +855,111 @@ export const createSubscriptionPriceInputSchema = z.object({
   startDate: z.string().nullable().optional(),
   preserveCurrentPrice: z.boolean().optional(),
 });
+
+// ============================================================================
+// In-App Purchase (Lifetime / Non-Consumable) Schemas
+// ============================================================================
+
+export const inAppPurchaseTypeSchema = z.enum([
+  "CONSUMABLE",
+  "NON_CONSUMABLE",
+  "NON_RENEWING_SUBSCRIPTION",
+]);
+
+export const listInAppPurchasesInputSchema = z.object({
+  appId: appIdSchema,
+  inAppPurchaseType: inAppPurchaseTypeSchema.optional(),
+  limit: z.number().int().min(1).max(200).optional(),
+});
+
+export const getInAppPurchaseInputSchema = z.object({
+  inAppPurchaseId: z.string().min(1, "In-app purchase ID is required"),
+});
+
+export const createInAppPurchaseInputSchema = z.object({
+  appId: appIdSchema,
+  name: z.string().min(1, "Name is required"),
+  productId: z.string().min(1, "Product ID is required"),
+  inAppPurchaseType: inAppPurchaseTypeSchema.optional(),
+  familySharable: z.boolean().optional(),
+  reviewNote: z.string().max(4000).optional(),
+});
+
+export const updateInAppPurchaseInputSchema = z.object({
+  inAppPurchaseId: z.string().min(1, "In-app purchase ID is required"),
+  name: z.string().min(1).optional(),
+  familySharable: z.boolean().optional(),
+  reviewNote: z.string().max(4000).optional(),
+});
+
+export const deleteInAppPurchaseInputSchema = z.object({
+  inAppPurchaseId: z.string().min(1, "In-app purchase ID is required"),
+});
+
+export const listInAppPurchaseLocalizationsInputSchema = z.object({
+  inAppPurchaseId: z.string().min(1, "In-app purchase ID is required"),
+  limit: z.number().int().min(1).max(200).optional(),
+});
+
+export const createInAppPurchaseLocalizationInputSchema = z.object({
+  inAppPurchaseId: z.string().min(1, "In-app purchase ID is required"),
+  locale: localeSchema,
+  name: z.string().min(1, "Name is required"),
+  description: z.string().optional(),
+});
+
+export const updateInAppPurchaseLocalizationInputSchema = z.object({
+  localizationId: z.string().min(1, "Localization ID is required"),
+  name: z.string().min(1).optional(),
+  description: z.string().optional(),
+});
+
+export const deleteInAppPurchaseLocalizationInputSchema = z.object({
+  localizationId: z.string().min(1, "Localization ID is required"),
+});
+
+export const listInAppPurchasePricePointsInputSchema = z.object({
+  inAppPurchaseId: z.string().min(1, "In-app purchase ID is required"),
+  territory: territoryIdSchema.optional(),
+  limit: z.number().int().min(1).max(200).optional(),
+  offset: z.number().int().min(0).optional(),
+});
+
+export const setInAppPurchasePriceInputSchema = z
+  .object({
+    inAppPurchaseId: z.string().min(1, "In-app purchase ID is required"),
+    baseTerritory: territoryIdSchema,
+    manualPrices: z
+      .array(
+        z.object({
+          territory: territoryIdSchema,
+          pricePointId: z.string().min(1, "Price Point ID is required"),
+        })
+      )
+      .min(1, "At least one manual price entry is required"),
+  })
+  .refine(
+    (data) => new Set(data.manualPrices.map((p) => p.territory)).size === data.manualPrices.length,
+    {
+      message: "manualPrices must not contain duplicate territories",
+      path: ["manualPrices"],
+    }
+  )
+  .refine((data) => data.manualPrices.some((p) => p.territory === data.baseTerritory), {
+    message: "manualPrices must include an entry for the baseTerritory",
+    path: ["manualPrices"],
+  });
+
+export const getInAppPurchaseAvailabilityInputSchema = z.object({
+  inAppPurchaseId: z.string().min(1, "In-app purchase ID is required"),
+});
+
+export const setInAppPurchaseAvailabilityInputSchema = z.object({
+  inAppPurchaseId: z.string().min(1, "In-app purchase ID is required"),
+  availableInNewTerritories: z.boolean(),
+  territories: z.array(territoryIdSchema).optional(),
+});
+
+export const submitInAppPurchaseForReviewInputSchema = z.object({
+  inAppPurchaseId: z.string().min(1, "In-app purchase ID is required"),
+});

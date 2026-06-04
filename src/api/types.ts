@@ -1476,3 +1476,228 @@ export interface GetSubscriptionAvailabilityResponse {
   included?: unknown[];
   links?: ResourceLinks;
 }
+
+// ============================================================================
+// In-App Purchase (v2) Resources — non-consumable "lifetime", consumable, non-renewing
+// ============================================================================
+
+export type InAppPurchaseType = "CONSUMABLE" | "NON_CONSUMABLE" | "NON_RENEWING_SUBSCRIPTION";
+
+export type InAppPurchaseState =
+  | "MISSING_METADATA"
+  | "WAITING_FOR_UPLOAD"
+  | "PROCESSING_CONTENT"
+  | "READY_TO_SUBMIT"
+  | "WAITING_FOR_REVIEW"
+  | "IN_REVIEW"
+  | "DEVELOPER_ACTION_NEEDED"
+  | "PENDING_BINARY_APPROVAL"
+  | "APPROVED"
+  | "DEVELOPER_REMOVED_FROM_SALE"
+  | "REMOVED_FROM_SALE"
+  | "REJECTED";
+
+export interface InAppPurchaseAttributes {
+  name?: string;
+  productId?: string;
+  inAppPurchaseType?: InAppPurchaseType;
+  state?: InAppPurchaseState;
+  reviewNote?: string;
+  familySharable?: boolean;
+  contentHosting?: boolean;
+}
+
+export interface InAppPurchaseRelationships {
+  app?: Relationship<"apps">;
+  inAppPurchaseLocalizations?: Relationship<"inAppPurchaseLocalizations">;
+  pricePoints?: Relationship<"inAppPurchasePricePoints">;
+  inAppPurchaseAvailability?: Relationship<"inAppPurchaseAvailabilities">;
+  iapPriceSchedule?: Relationship<"inAppPurchasePriceSchedules">;
+}
+
+export interface InAppPurchase {
+  type: "inAppPurchases";
+  id: string;
+  attributes: InAppPurchaseAttributes;
+  relationships?: InAppPurchaseRelationships;
+  links?: ResourceLinks;
+}
+
+export interface CreateInAppPurchaseRequest {
+  data: {
+    type: "inAppPurchases";
+    attributes: {
+      name: string;
+      productId: string;
+      inAppPurchaseType: InAppPurchaseType;
+      familySharable?: boolean;
+      reviewNote?: string;
+    };
+    relationships: {
+      app: { data: { type: "apps"; id: string } };
+    };
+  };
+}
+
+export interface UpdateInAppPurchaseRequest {
+  data: {
+    type: "inAppPurchases";
+    id: string;
+    attributes: {
+      name?: string;
+      familySharable?: boolean;
+      reviewNote?: string;
+    };
+  };
+}
+
+export type InAppPurchaseLocalizationState =
+  | "PREPARE_FOR_SUBMISSION"
+  | "WAITING_FOR_REVIEW"
+  | "APPROVED"
+  | "REJECTED";
+
+export interface InAppPurchaseLocalizationAttributes {
+  name?: string;
+  locale?: string;
+  description?: string;
+  state?: InAppPurchaseLocalizationState;
+}
+
+export interface InAppPurchaseLocalizationRelationships {
+  inAppPurchaseV2?: Relationship<"inAppPurchases">;
+}
+
+export interface InAppPurchaseLocalization {
+  type: "inAppPurchaseLocalizations";
+  id: string;
+  attributes: InAppPurchaseLocalizationAttributes;
+  relationships?: InAppPurchaseLocalizationRelationships;
+  links?: ResourceLinks;
+}
+
+export interface CreateInAppPurchaseLocalizationRequest {
+  data: {
+    type: "inAppPurchaseLocalizations";
+    attributes: {
+      name: string;
+      locale: string;
+      description?: string;
+    };
+    relationships: {
+      inAppPurchaseV2: { data: { type: "inAppPurchases"; id: string } };
+    };
+  };
+}
+
+export interface UpdateInAppPurchaseLocalizationRequest {
+  data: {
+    type: "inAppPurchaseLocalizations";
+    id: string;
+    attributes: {
+      name?: string;
+      description?: string;
+    };
+  };
+}
+
+export interface InAppPurchasePricePointAttributes {
+  customerPrice?: string;
+  proceeds?: string;
+}
+
+export interface InAppPurchasePricePointRelationships {
+  territory?: Relationship<"territories">;
+}
+
+export interface InAppPurchasePricePoint {
+  type: "inAppPurchasePricePoints";
+  id: string;
+  attributes: InAppPurchasePricePointAttributes;
+  relationships?: InAppPurchasePricePointRelationships;
+  links?: ResourceLinks;
+}
+
+export type InAppPurchasePriceScheduleAttributes = Record<string, never>;
+
+export interface InAppPurchasePriceSchedule {
+  type: "inAppPurchasePriceSchedules";
+  id: string;
+  attributes?: InAppPurchasePriceScheduleAttributes;
+  links?: ResourceLinks;
+}
+
+export interface CreateInAppPurchasePriceScheduleRequest {
+  data: {
+    type: "inAppPurchasePriceSchedules";
+    relationships: {
+      inAppPurchase: { data: { type: "inAppPurchases"; id: string } };
+      baseTerritory: { data: { type: "territories"; id: string } };
+      manualPrices: { data: Array<{ type: "inAppPurchasePrices"; id: string }> };
+    };
+  };
+  included: Array<{
+    type: "inAppPurchasePrices";
+    id: string;
+    attributes: {
+      startDate: string | null;
+    };
+    relationships: {
+      inAppPurchasePricePoint: {
+        data: { type: "inAppPurchasePricePoints"; id: string };
+      };
+    };
+  }>;
+}
+
+export interface InAppPurchaseAvailabilityAttributes {
+  availableInNewTerritories: boolean;
+}
+
+export interface InAppPurchaseAvailabilityRelationships {
+  availableTerritories?: Relationship<"territories">;
+}
+
+export interface InAppPurchaseAvailability {
+  type: "inAppPurchaseAvailabilities";
+  id: string;
+  attributes: InAppPurchaseAvailabilityAttributes;
+  relationships?: InAppPurchaseAvailabilityRelationships;
+  links?: ResourceLinks;
+}
+
+export interface CreateInAppPurchaseAvailabilityRequest {
+  data: {
+    type: "inAppPurchaseAvailabilities";
+    attributes: {
+      availableInNewTerritories: boolean;
+    };
+    relationships: {
+      inAppPurchase: { data: { type: "inAppPurchases"; id: string } };
+      availableTerritories?: {
+        data: Array<{ type: "territories"; id: string }>;
+      };
+    };
+  };
+}
+
+export interface GetInAppPurchaseAvailabilityResponse {
+  data: InAppPurchaseAvailability;
+  included?: unknown[];
+  links?: ResourceLinks;
+}
+
+export interface InAppPurchaseSubmission {
+  type: "inAppPurchaseSubmissions";
+  id: string;
+  links?: ResourceLinks;
+}
+
+export interface CreateInAppPurchaseSubmissionRequest {
+  data: {
+    type: "inAppPurchaseSubmissions";
+    relationships: {
+      inAppPurchaseV2: { data: { type: "inAppPurchases"; id: string } };
+    };
+  };
+}
