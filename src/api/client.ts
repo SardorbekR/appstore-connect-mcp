@@ -74,6 +74,48 @@ export class AppStoreConnectClient {
   }
 
   /**
+   * Make an authenticated raw request that returns the raw Response.
+   * Use this for endpoints that return non-JSON data (gzip, custom media types).
+   * Unlike rawRequest(), this includes JWT auth, rate limiting, and retry logic.
+   */
+  async requestRaw(
+    path: string,
+    options?: {
+      params?: Record<string, string | number | boolean | undefined>;
+      headers?: Record<string, string>;
+      timeout?: number;
+    }
+  ): Promise<Response> {
+    await this.enforceRateLimit();
+
+    let lastError: Error | undefined;
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        return await this.executeRawRequest(path, options);
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+
+        if (error instanceof ASCError && error.status >= 400 && error.status < 500) {
+          if (error instanceof RateLimitError) {
+            const waitMs = error.retryAfter * 1000;
+            await this.sleep(waitMs);
+            continue;
+          }
+          throw error;
+        }
+
+        if (attempt < MAX_RETRIES - 1) {
+          const delay = INITIAL_RETRY_DELAY_MS * 2 ** attempt;
+          await this.sleep(delay);
+        }
+      }
+    }
+
+    throw lastError ?? new Error("Request failed after max retries");
+  }
+
+  /**
    * Make a raw request (for custom operations like file uploads)
    */
   async rawRequest(
@@ -185,6 +227,77 @@ export class AppStoreConnectClient {
     }
 
     throw lastError ?? new Error("Request failed after max retries");
+  }
+
+  /**
+   * Execute a single raw HTTP request (returns Response, no JSON parsing)
+   */
+  private async executeRawRequest(
+    path: string,
+    options?: {
+      params?: Record<string, string | number | boolean | undefined>;
+      headers?: Record<string, string>;
+      timeout?: number;
+    }
+  ): Promise<Response> {
+    const token = await this.tokenManager.getToken();
+    const url = this.buildUrl(path, options?.params);
+
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${token}`,
+      ...options?.headers,
+    };
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), options?.timeout ?? DEFAULT_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.status === 429) {
+        const retryAfter = Number.parseInt(response.headers.get("Retry-After") ?? "60", 10);
+        throw new RateLimitError(retryAfter);
+      }
+
+      if (response.status === 204) {
+        return response;
+      }
+
+      if (!response.ok) {
+        try {
+          const body = await response.json();
+          throw parseAPIError(response.status, body);
+        } catch (error) {
+          if (error instanceof ASCError) throw error;
+          throw new ASCError(
+            `Request failed with status ${response.status}: ${response.statusText}`,
+            "API_ERROR",
+            response.status
+          );
+        }
+      }
+
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      if (error instanceof ASCError) throw error;
+
+      if (error instanceof Error) {
+        if (error.name === "AbortError") {
+          throw new ASCError("Request timed out", "TIMEOUT", 408);
+        }
+        throw new ASCError(error.message, "NETWORK_ERROR", 0);
+      }
+
+      throw new ASCError("Unknown error occurred", "UNKNOWN", 0);
+    }
   }
 
   /**
