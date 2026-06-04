@@ -1767,6 +1767,27 @@ describe("Subscription Tools", () => {
       });
       expect(mockClient.post).not.toHaveBeenCalled();
     });
+
+    it("should reject duplicate paid offer territories", async () => {
+      const result = await createPromotionalOffer(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionId: "sub1",
+        name: "Discount",
+        offerCode: "HALF",
+        duration: "THREE_MONTHS",
+        offerMode: "PAY_AS_YOU_GO",
+        periodCount: 3,
+        prices: [
+          { territory: "USA", pricePointId: "pp1" },
+          { territory: "USA", pricePointId: "pp2" },
+        ],
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: expect.objectContaining({ code: "VALIDATION_ERROR" }),
+      });
+      expect(mockClient.post).not.toHaveBeenCalled();
+    });
   });
 
   // ============================================================================
@@ -1877,6 +1898,67 @@ describe("Subscription Tools", () => {
       const result = await updatePromotionalOffer(mockClient as unknown as AppStoreConnectClient, {
         promotionalOfferId: "po1",
         offerMode: "PAY_AS_YOU_GO",
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: expect.objectContaining({ code: "VALIDATION_ERROR" }),
+      });
+      expect(mockClient.patch).not.toHaveBeenCalled();
+    });
+
+    it("should allow changing to a paid mode with periodCount and prices", async () => {
+      mockClient.patch.mockResolvedValueOnce({
+        data: {
+          id: "po1",
+          type: "subscriptionPromotionalOffers",
+          attributes: {
+            name: "Offer",
+            offerCode: "X",
+            duration: "ONE_MONTH",
+            offerMode: "PAY_AS_YOU_GO",
+            numberOfPeriods: 2,
+          },
+        },
+      });
+
+      const result = await updatePromotionalOffer(mockClient as unknown as AppStoreConnectClient, {
+        promotionalOfferId: "po1",
+        offerMode: "PAY_AS_YOU_GO",
+        periodCount: 2,
+        prices: [{ territory: "USA", pricePointId: "pp1" }],
+      });
+
+      expect(mockClient.patch).toHaveBeenCalledWith(
+        "/subscriptionPromotionalOffers/po1",
+        expect.objectContaining({
+          data: expect.objectContaining({
+            attributes: expect.objectContaining({
+              offerMode: "PAY_AS_YOU_GO",
+              numberOfPeriods: 2,
+            }),
+            relationships: {
+              prices: {
+                data: [{ type: "subscriptionPromotionalOfferPrices", id: "${USA-promo}" }],
+              },
+            },
+          }),
+          included: expect.any(Array),
+        })
+      );
+      expect(result).toEqual({
+        success: true,
+        data: expect.objectContaining({ id: "po1", offerMode: "PAY_AS_YOU_GO", periodCount: 2 }),
+      });
+    });
+
+    it("should reject duplicate update price territories", async () => {
+      const result = await updatePromotionalOffer(mockClient as unknown as AppStoreConnectClient, {
+        promotionalOfferId: "po1",
+        prices: [
+          { territory: "USA", pricePointId: "pp1" },
+          { territory: "USA", pricePointId: "pp2" },
+        ],
       });
 
       expect(result).toEqual({
