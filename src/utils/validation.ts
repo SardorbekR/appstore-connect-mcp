@@ -963,3 +963,16 @@ export const setInAppPurchaseAvailabilityInputSchema = z.object({
 export const submitInAppPurchaseForReviewInputSchema = z.object({
   inAppPurchaseId: z.string().min(1, "In-app purchase ID is required"),
 });
+
+export const getInAppPurchasePricePointEqualizationsInputSchema = z.object({
+  pricePointId: z.string().min(1, "Price Point ID is required"),
+  territories: z.array(territoryIdSchema).optional(),
+  limit: z.number().int().min(1).max(200).optional(),
+});
+
+export const listInAppPurchasePricesInputSchema = z.object({
+  inAppPurchaseId: z.string().min(1, "In-app purchase ID is required"),
+  territory: territoryIdSchema.optional(),
+  includeAutomatic: z.boolean().optional(),
+  limit: z.number().int().min(1).max(200).optional(),
+});

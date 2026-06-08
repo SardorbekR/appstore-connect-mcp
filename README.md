@@ -19,7 +19,10 @@ A Model Context Protocol (MCP) server for Apple's App Store Connect API. Manage 
 - **Build Management** - List and inspect app builds
 - **Category & Pricing** - Browse categories, check pricing and availability
 - **Pricing & PPP** - Set per-territory pricing with Purchase Power Parity support
-- **In-App Purchases** - Create and manage one-time purchases (lifetime/non-consumable, consumable, non-renewing): metadata, localization, pricing, availability, and review submission
+- **In-App Purchases** - Create and manage one-time purchases (lifetime/non-consumable, consumable, non-renewing): metadata, localization, pricing & PPP, availability, and review submission (review-screenshot upload excluded)
+- **Analytics Reports** - Request and download app analytics reports (engagement, commerce, usage, performance)
+- **Sales & Finance** - Download sales, trends, and financial reports
+- **Performance & Diagnostics** - App/build power & performance metrics and diagnostic logs
 - **Secure by Default** - ES256 JWT auth with automatic token refresh, credential redaction in logs
 
 ## Table of Contents
@@ -306,10 +309,41 @@ One-time purchases via Apple's In-App Purchases v2 API. `create_in_app_purchase`
 | `update_in_app_purchase_localization` | Update a localization | `localizationId`, `name?`, `description?` |
 | `delete_in_app_purchase_localization` | Delete a localization | `localizationId` |
 | `list_in_app_purchase_price_points` | List price points (customer price & proceeds) | `inAppPurchaseId`, `territory?`, `limit?`, `offset?` |
+| `get_in_app_purchase_price_point_equalizations` | Apple's PPP-equivalent price points for a base price point | `pricePointId`, `territories?`, `limit?` |
 | `set_in_app_purchase_price` | Set pricing (replaces schedule; one base territory to auto-equalize, or full PPP list) | `inAppPurchaseId`, `baseTerritory`, `manualPrices` |
+| `list_in_app_purchase_prices` | Read current per-territory prices (manual; optional automatic) | `inAppPurchaseId`, `territory?`, `includeAutomatic?`, `limit?` |
 | `get_in_app_purchase_availability` | Get territory availability | `inAppPurchaseId` |
 | `set_in_app_purchase_availability` | Set territory availability | `inAppPurchaseId`, `availableInNewTerritories`, `territories?` |
 | `submit_in_app_purchase_for_review` | Submit the IAP to App Review (independent of an app version) | `inAppPurchaseId` |
+
+### Analytics Reports
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `create_analytics_report_request` | Request an analytics report (ongoing or one-time snapshot) | `appId`, `accessType` |
+| `list_analytics_report_requests` | List analytics report requests for an app | `appId` |
+| `get_analytics_report_request` | Get an analytics report request | `requestId` |
+| `delete_analytics_report_request` | Delete an analytics report request | `requestId` |
+| `list_analytics_reports` | List reports available within a request | `requestId` |
+| `list_analytics_report_instances` | List instances (by date) of a report | `reportId` |
+| `list_analytics_report_segments` | List downloadable segments of a report instance | `instanceId` |
+| `download_analytics_report_segment` | Download a report segment | `url` |
+
+### Sales & Finance
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `get_sales_report` | Download a sales/trends report | `vendorNumber`, `reportType`, `reportSubType`, `frequency`, `reportDate` |
+| `get_finance_report` | Download a financial report | `vendorNumber`, `regionCode`, `reportDate`, `reportType` |
+
+### Performance & Diagnostics
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `get_app_perf_metrics` | Get an app's power & performance metrics | `appId`, `metricType` |
+| `get_build_perf_metrics` | Get a build's performance metrics | `buildId`, `metricType` |
+| `list_diagnostic_signatures` | List diagnostic signatures for a build | `buildId` |
+| `list_diagnostic_logs` | List diagnostic logs for a signature | `signatureId` |
 
 ## Usage Examples
 
@@ -355,6 +389,17 @@ Claude will:
 > "Set my app to $9.99 in the US and use PPP pricing for India and Brazil"
 
 Claude will use `set_app_prices` with the appropriate price point IDs for each territory.
+
+### Create a Lifetime Purchase
+
+> "Add a $99.99 lifetime unlock to MyApp with PPP pricing for India and Brazil"
+
+Claude will:
+1. Create a non-consumable IAP with `create_in_app_purchase`
+2. Add a display name with `create_in_app_purchase_localization`
+3. Find the $99.99 tier with `list_in_app_purchase_price_points`, then PPP equivalents with `get_in_app_purchase_price_point_equalizations`
+4. Apply per-territory pricing with `set_in_app_purchase_price` and open availability with `set_in_app_purchase_availability`
+5. Confirm the result with `list_in_app_purchase_prices`
 
 ### Check Version Status
 

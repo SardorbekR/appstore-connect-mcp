@@ -11,8 +11,10 @@ import {
   deleteInAppPurchaseLocalization,
   getInAppPurchase,
   getInAppPurchaseAvailability,
+  getInAppPurchasePricePointEqualizations,
   listInAppPurchaseLocalizations,
   listInAppPurchasePricePoints,
+  listInAppPurchasePrices,
   listInAppPurchases,
   setInAppPurchaseAvailability,
   setInAppPurchasePrice,
@@ -824,6 +826,220 @@ describe("In-App Purchase Tools", () => {
 
     it("should require inAppPurchaseId", async () => {
       const result = await submitInAppPurchaseForReview(asClient(mockClient), {});
+      expect(result).toEqual({
+        success: false,
+        error: expect.objectContaining({ code: "VALIDATION_ERROR" }),
+      });
+    });
+  });
+
+  // ==========================================================================
+  // getInAppPurchasePricePointEqualizations
+  // ==========================================================================
+
+  describe("getInAppPurchasePricePointEqualizations", () => {
+    it("should return equalized price points with resolved territories", async () => {
+      mockClient.get.mockResolvedValueOnce({
+        data: [
+          {
+            id: "ppIND",
+            type: "inAppPurchasePricePoints",
+            attributes: { customerPrice: "7.99", proceeds: "5.59" },
+            relationships: { territory: { data: { type: "territories", id: "IND" } } },
+          },
+        ],
+        included: [{ id: "IND", type: "territories", attributes: { currency: "INR" } }],
+        meta: { paging: { total: 1 } },
+      });
+
+      const result = await getInAppPurchasePricePointEqualizations(asClient(mockClient), {
+        pricePointId: "ppUSA",
+      });
+
+      expect(mockClient.get).toHaveBeenCalledWith(
+        "/v1/inAppPurchasePricePoints/ppUSA/equalizations",
+        expect.objectContaining({
+          include: "territory",
+          "fields[inAppPurchasePricePoints]": "customerPrice,proceeds",
+        })
+      );
+      expect(result).toEqual({
+        success: true,
+        data: [
+          {
+            id: "ppIND",
+            customerPrice: "7.99",
+            proceeds: "5.59",
+            territory: { id: "IND", currency: "INR" },
+          },
+        ],
+        meta: { total: 1, returned: 1 },
+      });
+    });
+
+    it("should pass a comma-joined territory filter", async () => {
+      mockClient.get.mockResolvedValueOnce({ data: [], meta: { paging: { total: 0 } } });
+
+      await getInAppPurchasePricePointEqualizations(asClient(mockClient), {
+        pricePointId: "ppUSA",
+        territories: ["IND", "BRA", "TUR"],
+      });
+
+      expect(mockClient.get).toHaveBeenCalledWith(
+        "/v1/inAppPurchasePricePoints/ppUSA/equalizations",
+        expect.objectContaining({ "filter[territory]": "IND,BRA,TUR" })
+      );
+    });
+
+    it("should require pricePointId", async () => {
+      const result = await getInAppPurchasePricePointEqualizations(asClient(mockClient), {});
+      expect(result).toEqual({
+        success: false,
+        error: expect.objectContaining({ code: "VALIDATION_ERROR" }),
+      });
+    });
+  });
+
+  // ==========================================================================
+  // listInAppPurchasePrices
+  // ==========================================================================
+
+  describe("listInAppPurchasePrices", () => {
+    it("should resolve manual prices via the price schedule", async () => {
+      mockClient.get
+        .mockResolvedValueOnce({ data: { id: "sched1", type: "inAppPurchasePriceSchedules" } })
+        .mockResolvedValueOnce({
+          data: [
+            {
+              id: "price1",
+              type: "inAppPurchasePrices",
+              attributes: { manual: true, startDate: null },
+              relationships: {
+                inAppPurchasePricePoint: {
+                  data: { type: "inAppPurchasePricePoints", id: "ppUSA" },
+                },
+                territory: { data: { type: "territories", id: "USA" } },
+              },
+            },
+          ],
+          included: [
+            {
+              id: "ppUSA",
+              type: "inAppPurchasePricePoints",
+              attributes: { customerPrice: "99.99", proceeds: "69.99" },
+            },
+            { id: "USA", type: "territories", attributes: { currency: "USD" } },
+          ],
+          meta: { paging: { total: 1 } },
+        });
+
+      const result = await listInAppPurchasePrices(asClient(mockClient), {
+        inAppPurchaseId: "iap1",
+      });
+
+      expect(mockClient.get).toHaveBeenNthCalledWith(1, "/v2/inAppPurchases/iap1/iapPriceSchedule");
+      expect(mockClient.get).toHaveBeenNthCalledWith(
+        2,
+        "/inAppPurchasePriceSchedules/sched1/manualPrices",
+        expect.objectContaining({
+          limit: 200,
+          include: "inAppPurchasePricePoint,territory",
+          "fields[inAppPurchasePricePoints]": "customerPrice,proceeds",
+        })
+      );
+      expect(result).toEqual({
+        success: true,
+        data: [
+          {
+            id: "price1",
+            territory: { id: "USA", currency: "USD" },
+            customerPrice: "99.99",
+            proceeds: "69.99",
+            manual: true,
+            startDate: null,
+            pricePointId: "ppUSA",
+          },
+        ],
+        meta: { total: 1, returned: 1 },
+      });
+    });
+
+    it("should also read automaticPrices when includeAutomatic is set", async () => {
+      mockClient.get
+        .mockResolvedValueOnce({ data: { id: "sched1", type: "inAppPurchasePriceSchedules" } })
+        .mockResolvedValueOnce({ data: [], included: [], meta: { paging: { total: 0 } } })
+        .mockResolvedValueOnce({
+          data: [
+            {
+              id: "auto1",
+              type: "inAppPurchasePrices",
+              attributes: { manual: false, startDate: null },
+              relationships: {
+                inAppPurchasePricePoint: {
+                  data: { type: "inAppPurchasePricePoints", id: "ppIND" },
+                },
+                territory: { data: { type: "territories", id: "IND" } },
+              },
+            },
+          ],
+          included: [
+            {
+              id: "ppIND",
+              type: "inAppPurchasePricePoints",
+              attributes: { customerPrice: "7.99", proceeds: "5.59" },
+            },
+            { id: "IND", type: "territories", attributes: { currency: "INR" } },
+          ],
+          meta: { paging: { total: 1 } },
+        });
+
+      const result = await listInAppPurchasePrices(asClient(mockClient), {
+        inAppPurchaseId: "iap1",
+        includeAutomatic: true,
+      });
+
+      expect(mockClient.get).toHaveBeenCalledTimes(3);
+      expect(mockClient.get).toHaveBeenNthCalledWith(
+        3,
+        "/inAppPurchasePriceSchedules/sched1/automaticPrices",
+        expect.anything()
+      );
+      expect(result).toEqual({
+        success: true,
+        data: [
+          {
+            id: "auto1",
+            territory: { id: "IND", currency: "INR" },
+            customerPrice: "7.99",
+            proceeds: "5.59",
+            manual: false,
+            startDate: null,
+            pricePointId: "ppIND",
+          },
+        ],
+        meta: { total: 1, returned: 1 },
+      });
+    });
+
+    it("should pass the territory filter to the prices request", async () => {
+      mockClient.get
+        .mockResolvedValueOnce({ data: { id: "sched1", type: "inAppPurchasePriceSchedules" } })
+        .mockResolvedValueOnce({ data: [], included: [] });
+
+      await listInAppPurchasePrices(asClient(mockClient), {
+        inAppPurchaseId: "iap1",
+        territory: "USA",
+      });
+
+      expect(mockClient.get).toHaveBeenNthCalledWith(
+        2,
+        "/inAppPurchasePriceSchedules/sched1/manualPrices",
+        expect.objectContaining({ "filter[territory]": "USA" })
+      );
+    });
+
+    it("should require inAppPurchaseId", async () => {
+      const result = await listInAppPurchasePrices(asClient(mockClient), {});
       expect(result).toEqual({
         success: false,
         error: expect.objectContaining({ code: "VALIDATION_ERROR" }),

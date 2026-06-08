@@ -53,9 +53,11 @@ import {
   deleteInAppPurchaseLocalization,
   getInAppPurchase,
   getInAppPurchaseAvailability,
+  getInAppPurchasePricePointEqualizations,
   inAppPurchaseToolDefinitions,
   listInAppPurchaseLocalizations,
   listInAppPurchasePricePoints,
+  listInAppPurchasePrices,
   listInAppPurchases,
   setInAppPurchaseAvailability,
   setInAppPurchasePrice,
@@ -245,6 +247,8 @@ const toolHandlers: Record<string, ToolHandler> = {
   get_in_app_purchase_availability: getInAppPurchaseAvailability,
   set_in_app_purchase_availability: setInAppPurchaseAvailability,
   submit_in_app_purchase_for_review: submitInAppPurchaseForReview,
+  get_in_app_purchase_price_point_equalizations: getInAppPurchasePricePointEqualizations,
+  list_in_app_purchase_prices: listInAppPurchasePrices,
 
   // Analytics
   create_analytics_report_request: createAnalyticsReportRequest,
