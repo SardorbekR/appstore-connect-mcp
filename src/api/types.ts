@@ -1701,3 +1701,28 @@ export interface CreateInAppPurchaseSubmissionRequest {
     };
   };
 }
+
+export interface InAppPurchasePriceAttributes {
+  startDate?: string | null;
+  endDate?: string | null;
+  manual?: boolean;
+}
+
+export interface InAppPurchasePriceRelationships {
+  inAppPurchasePricePoint?: Relationship<"inAppPurchasePricePoints">;
+  territory?: Relationship<"territories">;
+}
+
+export interface InAppPurchasePrice {
+  type: "inAppPurchasePrices";
+  id: string;
+  attributes?: InAppPurchasePriceAttributes;
+  relationships?: InAppPurchasePriceRelationships;
+  links?: ResourceLinks;
+}
+
+export interface InAppPurchasePriceScheduleResponse {
+  data: InAppPurchasePriceSchedule;
+  included?: unknown[];
+  links?: ResourceLinks;
+}

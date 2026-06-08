@@ -16,8 +16,10 @@ import type {
   InAppPurchase,
   InAppPurchaseAvailability,
   InAppPurchaseLocalization,
+  InAppPurchasePrice,
   InAppPurchasePricePoint,
   InAppPurchasePriceSchedule,
+  InAppPurchasePriceScheduleResponse,
   InAppPurchaseSubmission,
   Territory,
   UpdateInAppPurchaseLocalizationRequest,
@@ -31,8 +33,10 @@ import {
   deleteInAppPurchaseLocalizationInputSchema,
   getInAppPurchaseAvailabilityInputSchema,
   getInAppPurchaseInputSchema,
+  getInAppPurchasePricePointEqualizationsInputSchema,
   listInAppPurchaseLocalizationsInputSchema,
   listInAppPurchasePricePointsInputSchema,
+  listInAppPurchasePricesInputSchema,
   listInAppPurchasesInputSchema,
   setInAppPurchaseAvailabilityInputSchema,
   setInAppPurchasePriceInputSchema,
@@ -630,6 +634,196 @@ export async function submitInAppPurchaseForReview(
 }
 
 // ============================================================================
+// In-App Purchase Price Reads (PPP equalizations + current prices)
+// ============================================================================
+
+/** Extract a to-one (or first to-many) relationship id. */
+function relationshipId(
+  relationship: { data?: { id: string } | Array<{ id: string }> } | undefined
+): string | undefined {
+  const data = relationship?.data;
+  if (!data) {
+    return undefined;
+  }
+  return Array.isArray(data) ? data[0]?.id : data.id;
+}
+
+/**
+ * Get Apple's equivalent price points in other territories for an in-app purchase
+ * price point — the core Purchase Power Parity (PPP) data for one-time purchases.
+ */
+export async function getInAppPurchasePricePointEqualizations(
+  client: AppStoreConnectClient,
+  input: unknown
+): Promise<unknown> {
+  try {
+    const params = validateInput(getInAppPurchasePricePointEqualizationsInputSchema, input);
+
+    const queryParams: Record<string, string | number | boolean | undefined> = {
+      limit: params.limit,
+      "fields[inAppPurchasePricePoints]": "customerPrice,proceeds",
+      include: "territory",
+    };
+    if (params.territories && params.territories.length > 0) {
+      queryParams["filter[territory]"] = params.territories.join(",");
+    }
+
+    const response = await client.get<ASCListResponse<InAppPurchasePricePoint>>(
+      `/v1/inAppPurchasePricePoints/${params.pricePointId}/equalizations`,
+      queryParams
+    );
+
+    const included = (response.included ?? []) as Territory[];
+    const territoryMap = new Map<string, Territory>();
+    for (const item of included) {
+      if ((item as { type: string }).type === "territories") {
+        territoryMap.set(item.id, item);
+      }
+    }
+
+    return {
+      success: true,
+      data: response.data.map((pricePoint) => {
+        const territoryId = relationshipId(pricePoint.relationships?.territory);
+        const territory = territoryId ? territoryMap.get(territoryId) : undefined;
+        return {
+          id: pricePoint.id,
+          customerPrice: pricePoint.attributes.customerPrice,
+          proceeds: pricePoint.attributes.proceeds,
+          territory: territory
+            ? { id: territory.id, currency: territory.attributes.currency }
+            : territoryId
+              ? { id: territoryId }
+              : undefined,
+        };
+      }),
+      meta: {
+        total: response.meta?.paging?.total,
+        returned: response.data.length,
+      },
+    };
+  } catch (error) {
+    return formatErrorResponse(error);
+  }
+}
+
+/** Index price-schedule include resources (price points + territories) by id. */
+function indexIapPricingIncludes(included: Array<InAppPurchasePricePoint | Territory>): {
+  pricePointMap: Map<string, InAppPurchasePricePoint>;
+  territoryMap: Map<string, Territory>;
+} {
+  const pricePointMap = new Map<string, InAppPurchasePricePoint>();
+  const territoryMap = new Map<string, Territory>();
+  for (const item of included) {
+    const type = (item as { type: string }).type;
+    if (type === "inAppPurchasePricePoints") {
+      pricePointMap.set(item.id, item as InAppPurchasePricePoint);
+    } else if (type === "territories") {
+      territoryMap.set(item.id, item as Territory);
+    }
+  }
+  return { pricePointMap, territoryMap };
+}
+
+/** Resolve one scheduled price into a flat record with territory + customer price. */
+function mapIapPrice(
+  price: InAppPurchasePrice,
+  pricePointMap: Map<string, InAppPurchasePricePoint>,
+  territoryMap: Map<string, Territory>,
+  isManualRelationship: boolean
+) {
+  const pricePointId = relationshipId(price.relationships?.inAppPurchasePricePoint);
+  const territoryId = relationshipId(price.relationships?.territory);
+  const pricePoint = pricePointId ? pricePointMap.get(pricePointId) : undefined;
+  const territory = territoryId ? territoryMap.get(territoryId) : undefined;
+  return {
+    id: price.id,
+    territory: territory
+      ? { id: territory.id, currency: territory.attributes.currency }
+      : territoryId
+        ? { id: territoryId }
+        : undefined,
+    customerPrice: pricePoint?.attributes.customerPrice,
+    proceeds: pricePoint?.attributes.proceeds,
+    manual: price.attributes?.manual ?? isManualRelationship,
+    startDate: price.attributes?.startDate ?? null,
+    pricePointId,
+  };
+}
+
+/**
+ * List the current per-territory prices set for an in-app purchase. Returns the
+ * developer-set (manual) prices by default; pass includeAutomatic to also return
+ * Apple's auto-equalized prices. Reads via the in-app purchase's price schedule.
+ */
+export async function listInAppPurchasePrices(
+  client: AppStoreConnectClient,
+  input: unknown
+): Promise<unknown> {
+  try {
+    const params = validateInput(listInAppPurchasePricesInputSchema, input);
+
+    // Current prices live behind the in-app purchase's price schedule.
+    const schedule = await client.get<InAppPurchasePriceScheduleResponse>(
+      `/v2/inAppPurchases/${params.inAppPurchaseId}/iapPriceSchedule`
+    );
+    const scheduleId = schedule.data.id;
+
+    const queryParams: Record<string, string | number | boolean | undefined> = {
+      // A schedule holds at most one price per territory (<= 200) and the endpoint's
+      // page limit max is also 200, so a single full page always returns the complete
+      // set — no second page is possible. `total` is surfaced below to make any
+      // (theoretical) truncation visible.
+      limit: params.limit ?? 200,
+      include: "inAppPurchasePricePoint,territory",
+      "fields[inAppPurchasePricePoints]": "customerPrice,proceeds",
+      "fields[territories]": "currency",
+    };
+    if (params.territory) {
+      queryParams["filter[territory]"] = params.territory;
+    }
+
+    const relationshipsToRead = params.includeAutomatic
+      ? (["manualPrices", "automaticPrices"] as const)
+      : (["manualPrices"] as const);
+
+    const data: Array<ReturnType<typeof mapIapPrice>> = [];
+    let total = 0;
+    let totalKnown = true;
+
+    for (const relationship of relationshipsToRead) {
+      const response = await client.get<ASCListResponse<InAppPurchasePrice>>(
+        `/inAppPurchasePriceSchedules/${scheduleId}/${relationship}`,
+        queryParams
+      );
+      const pageTotal = response.meta?.paging?.total;
+      if (typeof pageTotal === "number") {
+        total += pageTotal;
+      } else {
+        totalKnown = false;
+      }
+      const { pricePointMap, territoryMap } = indexIapPricingIncludes(
+        (response.included ?? []) as Array<InAppPurchasePricePoint | Territory>
+      );
+      for (const price of response.data) {
+        data.push(mapIapPrice(price, pricePointMap, territoryMap, relationship === "manualPrices"));
+      }
+    }
+
+    return {
+      success: true,
+      data,
+      meta: {
+        total: totalKnown ? total : undefined,
+        returned: data.length,
+      },
+    };
+  } catch (error) {
+    return formatErrorResponse(error);
+  }
+}
+
+// ============================================================================
 // Tool Definitions
 // ============================================================================
 
@@ -968,6 +1162,65 @@ export const inAppPurchaseToolDefinitions = [
         inAppPurchaseId: {
           type: "string",
           description: "The in-app purchase ID",
+        },
+      },
+      required: ["inAppPurchaseId"],
+    },
+  },
+  {
+    name: "get_in_app_purchase_price_point_equalizations",
+    description:
+      "Get Apple's equivalent price points in other territories for an in-app purchase price point — the core Purchase Power Parity (PPP) data for one-time purchases. Use list_in_app_purchase_price_points to get a base price point ID, then feed the per-territory results into set_in_app_purchase_price.",
+    annotations: { readOnlyHint: true },
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        pricePointId: {
+          type: "string",
+          description:
+            "The in-app purchase price point ID (from list_in_app_purchase_price_points)",
+        },
+        territories: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            "Filter to specific territories (3-letter codes, e.g., ['IND', 'BRA', 'TUR'])",
+        },
+        limit: {
+          type: "number",
+          description: "Maximum number of equalizations to return (1-200)",
+          minimum: 1,
+          maximum: 200,
+        },
+      },
+      required: ["pricePointId"],
+    },
+  },
+  {
+    name: "list_in_app_purchase_prices",
+    description:
+      "List the current per-territory prices set for an in-app purchase, with resolved customer price and territory. Returns developer-set (manual) prices by default; set includeAutomatic to also include Apple's auto-equalized prices. Use this to read existing pricing or verify a set_in_app_purchase_price change.",
+    annotations: { readOnlyHint: true },
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        inAppPurchaseId: {
+          type: "string",
+          description: "The in-app purchase ID",
+        },
+        territory: {
+          type: "string",
+          description: "Filter by territory (3-letter code, e.g., USA, GBR, JPN)",
+        },
+        includeAutomatic: {
+          type: "boolean",
+          description: "Also include Apple's automatically-equalized prices (default false)",
+        },
+        limit: {
+          type: "number",
+          description: "Maximum number of prices to return per price set (1-200)",
+          minimum: 1,
+          maximum: 200,
         },
       },
       required: ["inAppPurchaseId"],
