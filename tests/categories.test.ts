@@ -166,42 +166,58 @@ describe("Category Tools", () => {
             availableInNewTerritories: true,
           },
         },
-        included: [
-          {
-            id: "TA-USA",
-            type: "territoryAvailabilities",
-            attributes: {
-              available: true,
-              preOrderEnabled: false,
-              releaseDate: "2024-01-01",
-            },
-            relationships: {
-              territory: {
-                data: { id: "USA" },
-              },
+      });
+      mockClient.paginate.mockImplementationOnce(async function* () {
+        yield {
+          id: "TA-USA",
+          type: "territoryAvailabilities",
+          attributes: {
+            available: true,
+            preOrderEnabled: false,
+            releaseDate: "2024-01-01",
+          },
+          relationships: {
+            territory: {
+              data: { id: "USA" },
             },
           },
-          {
-            id: "TA-GBR",
-            type: "territoryAvailabilities",
-            attributes: {
-              available: true,
-              preOrderEnabled: true,
-              releaseDate: "2024-01-15",
-            },
-            relationships: {
-              territory: {
-                data: { id: "GBR" },
-              },
+        };
+        yield {
+          id: "TA-CHN",
+          type: "territoryAvailabilities",
+          attributes: {
+            available: false,
+          },
+          relationships: {
+            territory: {
+              data: { id: "CHN" },
             },
           },
-        ],
+        };
+        yield {
+          id: "TA-GBR",
+          type: "territoryAvailabilities",
+          attributes: {
+            available: true,
+            preOrderEnabled: true,
+            releaseDate: "2024-01-15",
+          },
+          relationships: {
+            territory: {
+              data: { id: "GBR" },
+            },
+          },
+        };
       });
 
       const result = await getAppAvailability(mockClient as unknown as AppStoreConnectClient, {
         appId: "123456",
       });
 
+      expect(mockClient.paginate).toHaveBeenCalledWith(
+        "/v2/appAvailabilities/AVAIL123/territoryAvailabilities",
+        expect.objectContaining({ limit: 200, include: "territory" })
+      );
       expect(result).toEqual({
         success: true,
         data: {
