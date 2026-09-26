@@ -153,17 +153,11 @@ export async function getAppAvailability(
     const params = validateInput(getAppAvailabilityInputSchema, input);
 
     const response = await client.get<ASCResponse<AppAvailability>>(
-      `/apps/${params.appId}/appAvailabilityV2`,
-      {
-        include: "territoryAvailabilities",
-        "fields[territoryAvailabilities]": "available,preOrderEnabled,releaseDate",
-      }
+      `/apps/${params.appId}/appAvailabilityV2`
     );
 
     const availability = response.data;
-    const included = response.included ?? [];
 
-    // Get territory availability details from included
     interface TerritoryAvailability {
       type: string;
       id: string;
@@ -179,18 +173,30 @@ export async function getAppAvailability(
       };
     }
 
-    const territoryAvailabilities = included
-      .filter(
-        (item): item is TerritoryAvailability =>
-          (item as TerritoryAvailability).type === "territoryAvailabilities"
-      )
-      .filter((ta) => ta.attributes.available)
-      .map((ta) => ({
+    // An `include` of territoryAvailabilities returns only the first 10, so page
+    // the relationship itself to cover every territory.
+    const territoryAvailabilities: Array<{
+      territoryId: string;
+      available: boolean;
+      preOrderEnabled?: boolean;
+      releaseDate?: string;
+    }> = [];
+    for await (const ta of client.paginate<TerritoryAvailability>(
+      `/v2/appAvailabilities/${availability.id}/territoryAvailabilities`,
+      {
+        limit: 200,
+        include: "territory",
+        "fields[territoryAvailabilities]": "available,preOrderEnabled,releaseDate,territory",
+      }
+    )) {
+      if (!ta.attributes.available) continue;
+      territoryAvailabilities.push({
         territoryId: ta.relationships?.territory?.data?.id ?? ta.id,
         available: ta.attributes.available,
         preOrderEnabled: ta.attributes.preOrderEnabled,
         releaseDate: ta.attributes.releaseDate,
-      }));
+      });
+    }
 
     return {
       success: true,
