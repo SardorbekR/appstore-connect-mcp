@@ -49,9 +49,8 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "jose": "^5.2.0",
-    "undici": "^6.6.0",
     "zod": "^3.22.0"
   },
   "devDependencies": {
