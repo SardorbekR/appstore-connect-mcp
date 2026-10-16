@@ -796,6 +796,16 @@ npm run dev
 npm start
 ```
 
+### Releasing
+
+Releases publish from GitHub Actions (`.github/workflows/publish.yml`) when a version tag is pushed. npm uses [trusted publishing](https://docs.npmjs.com/trusted-publishers) (OIDC, no token, provenance attached) and the MCP Registry uses GitHub OIDC.
+
+1. Set the new version in `package.json` and `package-lock.json` (`npm version X.Y.Z --no-git-tag-version`), both fields in `server.json`, and `SERVER_VERSION` in `src/index.ts`
+2. Merge to `main`
+3. `git tag vX.Y.Z && git push origin vX.Y.Z`
+
+The workflow refuses to publish if any version field differs from the tag, or if typecheck, lint, tests, or the OpenAPI index check fail.
+
 ### Contributing
 
 1. Fork the repository
