@@ -29,6 +29,15 @@ interface RateLimiter {
   timestamps: number[];
 }
 
+export interface ClientOptions {
+  /** Refuse every non-GET request before it is signed or sent (ASC_READ_ONLY). */
+  readOnly?: boolean;
+}
+
+function readOnlyError(method: string): ASCError {
+  return new ASCError(`Read-only mode (ASC_READ_ONLY) blocks ${method} requests`, "READ_ONLY", 403);
+}
+
 /**
  * App Store Connect API Client
  */
@@ -36,10 +45,12 @@ export class AppStoreConnectClient {
   private readonly tokenManager: TokenManager;
   private readonly baseUrl: string;
   private readonly rateLimiter: RateLimiter = { timestamps: [] };
+  readonly readOnly: boolean;
 
-  constructor(tokenManager: TokenManager, baseUrl = BASE_URL) {
+  constructor(tokenManager: TokenManager, baseUrl = BASE_URL, options: ClientOptions = {}) {
     this.tokenManager = tokenManager;
     this.baseUrl = baseUrl;
+    this.readOnly = options.readOnly ?? false;
   }
 
   /**
@@ -127,6 +138,10 @@ export class AppStoreConnectClient {
       timeout?: number;
     }
   ): Promise<Response> {
+    if (this.readOnly && options.method.toUpperCase() !== "GET") {
+      throw readOnlyError(options.method.toUpperCase());
+    }
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), options.timeout ?? DEFAULT_TIMEOUT_MS);
 
@@ -197,6 +212,10 @@ export class AppStoreConnectClient {
    * Core request method with retry logic
    */
   private async request<T>(options: RequestOptions): Promise<T> {
+    if (this.readOnly && options.method !== "GET") {
+      throw readOnlyError(options.method);
+    }
+
     await this.enforceRateLimit();
 
     let lastError: Error | undefined;
@@ -215,6 +234,12 @@ export class AppStoreConnectClient {
             await this.sleep(waitMs);
             continue;
           }
+          throw error;
+        }
+
+        // A POST that failed with a server or network error may still have been applied;
+        // retrying could create the resource (or submit) twice.
+        if (options.method === "POST") {
           throw error;
         }
 
@@ -435,6 +460,9 @@ export class AppStoreConnectClient {
 /**
  * Create an App Store Connect client from a token manager
  */
-export function createClient(tokenManager: TokenManager): AppStoreConnectClient {
-  return new AppStoreConnectClient(tokenManager);
+export function createClient(
+  tokenManager: TokenManager,
+  options: ClientOptions = {}
+): AppStoreConnectClient {
+  return new AppStoreConnectClient(tokenManager, BASE_URL, options);
 }

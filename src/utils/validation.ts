@@ -11,6 +11,13 @@ export const appIdSchema = z
   .regex(/^\d+$/, "App ID must be a numeric string")
   .min(1, "App ID is required");
 
+// Generic App Store Connect resource ID, safe to interpolate into a URL path segment.
+// IDs are numeric, UUIDs, or base64url-style strings (price points).
+export const resourceIdSchema = z
+  .string()
+  .regex(/^[A-Za-z0-9._~=+-]+$/, "ID contains characters that are not allowed in a resource ID")
+  .refine((id) => id !== "." && id !== "..", "ID cannot be '.' or '..'");
+
 // Version ID - numeric string
 export const versionIdSchema = z.string().min(1, "Version ID is required");
 

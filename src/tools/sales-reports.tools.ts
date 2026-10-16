@@ -192,6 +192,7 @@ export const salesReportsToolDefinitions = [
       "PRE_ORDER + SUMMARY (daily/weekly/monthly). " +
       "Report date format varies by frequency: DAILY = YYYY-MM-DD, WEEKLY = YYYY-MM-DD (Sunday start), " +
       "MONTHLY = YYYY-MM, YEARLY = YYYY.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -244,6 +245,7 @@ export const salesReportsToolDefinitions = [
       "The regionCode is a 1-2 letter code representing the financial region (e.g., 'US' for United States, 'EU' for Europe, 'JP' for Japan, 'Z1' for rest of world). " +
       "Report date must be in YYYY-MM format. Reports are typically available 30-45 days after the end of the fiscal month. " +
       "Use FINANCIAL for revenue summary or FINANCE_DETAIL for line-item details.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {

@@ -390,6 +390,7 @@ export const analyticsToolDefinitions = [
     name: "create_analytics_report_request",
     description:
       "Create a new analytics report request for an app. Use ONGOING for continuous reports or ONE_TIME_SNAPSHOT for a single snapshot. Reports take time to generate after creation.",
+    annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -411,6 +412,7 @@ export const analyticsToolDefinitions = [
     name: "list_analytics_report_requests",
     description:
       "List all analytics report requests for an app. Shows whether each request is active or stopped due to inactivity.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -431,6 +433,7 @@ export const analyticsToolDefinitions = [
   {
     name: "get_analytics_report_request",
     description: "Get details of a specific analytics report request.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -446,6 +449,7 @@ export const analyticsToolDefinitions = [
     name: "delete_analytics_report_request",
     description:
       "Delete an analytics report request. This stops report generation and removes access to existing reports.",
+    annotations: { readOnlyHint: false, destructiveHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -461,6 +465,7 @@ export const analyticsToolDefinitions = [
     name: "list_analytics_reports",
     description:
       "List analytics reports available for a report request. Can filter by category (APP_STORE_ENGAGEMENT, COMMERCE, APP_USAGE, FRAMEWORKS_USAGE, PERFORMANCE).",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -493,6 +498,7 @@ export const analyticsToolDefinitions = [
     name: "list_analytics_report_instances",
     description:
       "List report instances (dated snapshots) for an analytics report. Each instance represents data for a specific processing date. Can filter by granularity (DAILY, WEEKLY, MONTHLY) and processing date.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -523,6 +529,7 @@ export const analyticsToolDefinitions = [
     name: "list_analytics_report_segments",
     description:
       "List downloadable segments for a report instance. Each segment contains a URL for downloading the report data, along with its checksum and size.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -544,6 +551,7 @@ export const analyticsToolDefinitions = [
     name: "download_analytics_report_segment",
     description:
       "Download and parse an analytics report segment from its pre-signed URL. The segment data is gzip-compressed TSV. Returns parsed headers and rows (as key-value objects). Use list_analytics_report_segments to get the download URL first.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
