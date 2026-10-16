@@ -7,6 +7,7 @@ import { z } from "zod";
 import type { AppStoreConnectClient } from "../api/client.js";
 import type { ASCListResponse, ASCResponse } from "../api/types.js";
 import { formatErrorResponse } from "../utils/errors.js";
+import { deliverText } from "../utils/text-output.js";
 import { resourceIdSchema, validateInput } from "../utils/validation.js";
 import type { ToolModule } from "./types.js";
 
@@ -99,8 +100,9 @@ const offerCodeListInputSchema = z.object({
   limit: limitSchema,
 });
 
-const oneTimeUseCodeBatchIdInputSchema = z.object({
+const oneTimeCodeValuesInputSchema = z.object({
   oneTimeUseCodeBatchId: resourceIdSchema,
+  savePath: z.string().min(1).optional(),
 });
 
 const createCustomCodeInputSchema = z.object({
@@ -330,17 +332,20 @@ export async function getIapOneTimeCodeValues(
   input: unknown
 ): Promise<unknown> {
   try {
-    const params = validateInput(oneTimeUseCodeBatchIdInputSchema, input);
+    const params = validateInput(oneTimeCodeValuesInputSchema, input);
     // The values endpoint returns text/csv, not JSON, so it is the only call that uses requestRaw.
     const response = await client.requestRaw(
       `/inAppPurchaseOfferCodeOneTimeUseCodes/${params.oneTimeUseCodeBatchId}/values`,
       { headers: { Accept: "text/csv" } }
     );
-    const csv = await response.text();
-    const lineCount = csv.split(/\r?\n/).filter((line) => line.trim() !== "").length;
+    const delivered = await deliverText(await response.text(), params.savePath);
     return {
       success: true,
-      data: { oneTimeUseCodeBatchId: params.oneTimeUseCodeBatchId, lineCount, csv },
+      data: {
+        oneTimeUseCodeBatchId: params.oneTimeUseCodeBatchId,
+        lineCount: delivered.lineCount,
+        ...(delivered.savedTo ? { savedTo: delivered.savedTo } : { csv: delivered.text }),
+      },
     };
   } catch (error) {
     return formatErrorResponse(error);
@@ -528,7 +533,7 @@ export const iapOfferCodeToolDefinitions = [
   {
     name: "get_iap_one_time_code_values",
     description:
-      "Get the redemption code values of a one-time-use batch as CSV text, with the number of non-empty lines.",
+      "Get the redemption code values of a one-time-use batch as CSV, inline or (for large batches) to a new file via savePath, with the number of non-empty lines. The codes are sensitive.",
     annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
@@ -536,6 +541,11 @@ export const iapOfferCodeToolDefinitions = [
         oneTimeUseCodeBatchId: {
           type: "string",
           description: "The one-time-use code batch ID from list_iap_one_time_code_batches",
+        },
+        savePath: {
+          type: "string",
+          description:
+            "Absolute path of a new file to write the CSV to (owner-only permissions; an existing file is never overwritten). Required when the CSV is too large to return inline.",
         },
       },
       required: ["oneTimeUseCodeBatchId"],

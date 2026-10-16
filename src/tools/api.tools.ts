@@ -32,8 +32,9 @@ const MAX_MAX_ITEMS = 2000;
 const MAX_LISTED_PARAMETERS = 60;
 // Room kept free for the pagination block (cursor URL, stop reason) added after a page is sized
 const PAGINATION_RESERVE_CHARS = 2_000;
-// Attribute values never returned or echoed in errors (typed tools hide them too)
-const SECRET_KEYS = new Set(["demoAccountPassword"]);
+// Attribute values never returned or echoed in errors: App Review demo passwords (typed tools
+// hide them too) and webhook signing secrets
+const SECRET_KEYS = new Set(["demoAccountPassword", "secret"]);
 
 /** Operations whose responses are files, with the typed tool that handles them. */
 const FILE_RESPONSE_TOOLS: Record<string, string> = {
@@ -69,7 +70,12 @@ const apiRequestInputSchema = z
   });
 
 const apiSearchInputSchema = z.object({
-  query: z.string().min(1, "Search query is required"),
+  query: z
+    .string()
+    .refine(
+      (query) => /[A-Za-z0-9]/.test(query),
+      "Search query needs at least one letter or digit"
+    ),
   method: z.enum(METHODS).optional(),
   limit: z.number().int().min(1).max(50).optional(),
 });
@@ -567,30 +573,30 @@ function resolveRequest(params: ApiRequestInput, readOnly: boolean): ResolvedReq
     throw new ValidationError("GET requests cannot have a body", "body");
   }
 
-  if (params.allowUnknown) {
-    const operation = matchOperation(method, path);
-    return {
-      method,
-      path,
-      query,
-      operation,
-      label: operation ? formatOperation(operation) : `${method} ${path}`,
-    };
+  const operation = params.allowUnknown
+    ? matchOperation(method, path)
+    : resolveOperation(method, path);
+  if (operation && !params.allowUnknown) {
+    validateQuery(operation, query);
+    validateBody(operation, path, params.body);
   }
 
-  const operation = resolveOperation(method, path);
-  validateQuery(operation, query);
-  validateBody(operation, path, params.body);
-
-  const mediaType = operation.responseMediaType;
-  if (mediaType && !mediaType.endsWith("+json")) {
+  // File downloads cannot be returned as JSON, even when spec checks are skipped
+  const mediaType = operation?.responseMediaType;
+  if (operation && mediaType && !mediaType.endsWith("+json")) {
     const tool = FILE_RESPONSE_TOOLS[operation.path];
     throw new ValidationError(
       `${formatOperation(operation)} returns ${mediaType}, not JSON.${tool ? ` Use the ${tool} tool instead.` : ""}`,
       "path"
     );
   }
-  return { method, path, query, operation, label: formatOperation(operation) };
+  return {
+    method,
+    path,
+    query,
+    operation,
+    label: operation ? formatOperation(operation) : `${method} ${path}`,
+  };
 }
 
 async function executeGet(
@@ -789,7 +795,7 @@ function requestDefinition(readOnly: boolean): ToolDefinition {
           description: "Follow links.next for list operations (GET only)",
         },
         maxItems: {
-          type: "number",
+          type: "integer",
           minimum: 1,
           maximum: MAX_MAX_ITEMS,
           description: `Maximum resources to collect when paginating (default ${DEFAULT_MAX_ITEMS})`,
@@ -820,7 +826,7 @@ const searchDefinition: ToolDefinition = {
       query: { type: "string", description: "Keywords to search for" },
       method: { type: "string", enum: [...METHODS], description: "Only return this HTTP method" },
       limit: {
-        type: "number",
+        type: "integer",
         minimum: 1,
         maximum: 50,
         description: "Maximum results (default 20)",

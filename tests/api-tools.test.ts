@@ -280,7 +280,26 @@ describe("asc_api_request", () => {
     });
   });
 
+  it("refuses file downloads even with allowUnknown", async () => {
+    const result = await call(client, { path: "/v1/salesReports", allowUnknown: true });
+    expect(JSON.stringify(result)).toContain("get_sales_report");
+    expect(client.get).not.toHaveBeenCalled();
+  });
+
   describe("secrets", () => {
+    it("masks webhook signing secrets in responses", async () => {
+      client.post.mockResolvedValueOnce({
+        data: { type: "webhooks", id: "w1", attributes: { name: "hook", secret: "whsec_123" } },
+      });
+      const result = await call(client, {
+        method: "POST",
+        path: "/v1/webhooks",
+        allowUnknown: true,
+        body: { data: { type: "webhooks", attributes: { secret: "whsec_123" } } },
+      });
+      expect(JSON.stringify(result)).not.toContain("whsec_123");
+    });
+
     it("masks demo account passwords in responses", async () => {
       client.get.mockResolvedValueOnce({
         data: {

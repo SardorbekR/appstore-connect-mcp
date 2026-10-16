@@ -105,7 +105,7 @@ describe("uploadAsset", () => {
     });
   });
 
-  it("stops with UPLOAD_ERROR when a chunk upload fails, without committing", async () => {
+  it("stops with UPLOAD_ERROR when a chunk upload fails and deletes the reserved asset", async () => {
     client.rawRequest.mockResolvedValueOnce({ ok: false, status: 403 });
     await expect(
       uploadAsset(client as unknown as AppStoreConnectClient, options())
@@ -113,6 +113,21 @@ describe("uploadAsset", () => {
       code: "UPLOAD_ERROR",
     });
     expect(client.patch).not.toHaveBeenCalled();
+    expect(client.delete).toHaveBeenCalledWith("/appPreviews/asset-1");
+  });
+
+  it("deletes the reserved asset when the commit fails, and says so if that cleanup fails", async () => {
+    const { ASCError } = await import("../src/utils/errors.js");
+    client.patch.mockRejectedValueOnce(new ASCError("Checksum mismatch", "CONFLICT", 409));
+    client.delete.mockRejectedValueOnce(new Error("network down"));
+
+    const failure = uploadAsset(client as unknown as AppStoreConnectClient, options());
+
+    await expect(failure).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: expect.stringContaining("asset-1 could not be deleted"),
+    });
+    expect(client.delete).toHaveBeenCalledWith("/appPreviews/asset-1");
   });
 
   it("refuses a file whose size differs from the expected size", async () => {

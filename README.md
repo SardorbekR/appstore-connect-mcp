@@ -542,7 +542,7 @@ One-time purchases via Apple's In-App Purchases v2 API. `create_in_app_purchase`
 | `update_subscription_offer_code` | Activate or deactivate a subscription offer code. | `offerCodeId`, `active` |
 | `create_subscription_one_time_codes` | Generate a batch of one-time use redemption codes for a subscription offer code. | `offerCodeId`, `numberOfCodes`, `expirationDate`, `environment?` |
 | `list_subscription_one_time_code_batches` | List the one-time use code batches generated for a subscription offer code. | `offerCodeId`, `limit?` |
-| `get_subscription_one_time_code_values` | Download the redemption codes of a one-time use code batch as CSV text. | `oneTimeUseCodeBatchId` |
+| `get_subscription_one_time_code_values` | Download the redemption codes of a one-time use code batch as CSV, inline or (for large batches) to a new file via savePath. | `oneTimeUseCodeBatchId`, `savePath?` |
 | `create_subscription_custom_code` | Create a custom (vanity) redemption code for a subscription offer code, optionally with an expiration date. | `offerCodeId`, `customCode`, `numberOfCodes`, `expirationDate?` |
 | `list_subscription_custom_codes` | List the custom codes created for a subscription offer code. | `offerCodeId`, `limit?` |
 
@@ -556,7 +556,7 @@ One-time purchases via Apple's In-App Purchases v2 API. `create_in_app_purchase`
 | `update_iap_offer_code` | Activate or deactivate an in-app purchase offer code. | `offerCodeId`, `active` |
 | `create_iap_one_time_codes` | Generate a batch of one-time-use redemption codes for an offer code. | `offerCodeId`, `numberOfCodes`, `expirationDate`, `environment?` |
 | `list_iap_one_time_code_batches` | List the one-time-use code batches generated for an offer code, with counts and expiry dates. | `offerCodeId`, `limit?` |
-| `get_iap_one_time_code_values` | Get the redemption code values of a one-time-use batch as CSV text, with the number of non-empty lines. | `oneTimeUseCodeBatchId` |
+| `get_iap_one_time_code_values` | Get the redemption code values of a one-time-use batch as CSV, inline or (for large batches) to a new file via savePath, with the number of non-empty lines. | `oneTimeUseCodeBatchId`, `savePath?` |
 | `create_iap_custom_code` | Create a custom redemption code for an offer code. | `offerCodeId`, `customCode`, `numberOfCodes`, `expirationDate?` |
 | `list_iap_custom_codes` | List the custom redemption codes for an offer code, with redemption counts and expiry dates. | `offerCodeId`, `limit?` |
 
@@ -658,7 +658,8 @@ Claude will use `asc_api_search` to find the operation, `asc_api_describe` to se
 - **JWT tokens** are automatically redacted from any error output
 - **Issuer ID** is redacted from error messages and details; demo account passwords are never returned and are redacted from errors
 - **Read-only mode** (`ASC_READ_ONLY=1`) blocks writes in the HTTP client itself, not just in the tool list
-- **Generic requests** only reach relative `/v1`-`/v3` paths that match Apple's spec, with `..`, encoded, and absolute paths rejected
+- **Generic requests** only reach relative `/v1`-`/v3` paths on the App Store Connect host, with `..`, encoded, and absolute paths rejected; they must match Apple's spec unless `allowUnknown` is set. Demo account passwords and webhook secrets are masked in responses
+- **Offer code CSVs** are written only to new files (`savePath`, owner-only permissions), never over existing ones
 - Token caching minimizes key usage (15-min tokens, refreshed at 10 min)
 
 ### Path Validation
