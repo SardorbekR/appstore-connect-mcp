@@ -200,11 +200,11 @@ const updateWinBackOfferInputSchema = z
     winBackOfferId: resourceIdSchema,
     customerEligibilityPaidSubscriptionDurationInMonths: nonNegativeIntSchema.optional(),
     customerEligibilityTimeSinceLastSubscribedInMonths: timeSinceLastSubscribedSchema.optional(),
-    customerEligibilityWaitBetweenOffersInMonths: nonNegativeIntSchema.optional(),
+    customerEligibilityWaitBetweenOffersInMonths: nonNegativeIntSchema.nullable().optional(),
     startDate: isoDateSchema.optional(),
     endDate: isoDateSchema.nullable().optional(),
     priority: winBackPrioritySchema.optional(),
-    promotionIntent: promotionIntentSchema.optional(),
+    promotionIntent: promotionIntentSchema.nullable().optional(),
   })
   .refine((input) => WIN_BACK_UPDATE_ATTRIBUTES.some((key) => input[key] !== undefined), {
     message: "Provide at least one field to update",
@@ -768,9 +768,9 @@ export const subscriptionOffersToolDefinitions = [
           required: ["minimum", "maximum"],
         },
         customerEligibilityWaitBetweenOffersInMonths: {
-          type: "integer",
+          type: ["integer", "null"],
           minimum: 0,
-          description: "Months to wait between win-back offers",
+          description: "Months to wait between win-back offers, or null to remove the wait",
         },
         startDate: { type: "string", description: "First day the offer is available, YYYY-MM-DD" },
         endDate: {
@@ -778,7 +778,12 @@ export const subscriptionOffersToolDefinitions = [
           description: "Last day the offer is available, YYYY-MM-DD, or null to remove it",
         },
         priority: winBackPriorityProperty,
-        promotionIntent: promotionIntentProperty,
+        promotionIntent: {
+          ...promotionIntentProperty,
+          type: ["string", "null"],
+          enum: [...promotionIntentProperty.enum, null],
+          description: "Whether App Store promotes the offer, or null to remove the setting",
+        },
       },
       required: ["winBackOfferId"],
     },

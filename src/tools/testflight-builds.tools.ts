@@ -134,7 +134,14 @@ const createAppLocalizationInputSchema = z.object({
 });
 
 const updateAppLocalizationInputSchema = z
-  .object({ localizationId: resourceIdSchema, ...appLocalizationFields })
+  .object({
+    localizationId: resourceIdSchema,
+    description: appLocalizationFields.description.nullable(),
+    feedbackEmail: appLocalizationFields.feedbackEmail.nullable(),
+    marketingUrl: appLocalizationFields.marketingUrl.nullable(),
+    privacyPolicyUrl: appLocalizationFields.privacyPolicyUrl.nullable(),
+    tvOsPrivacyPolicy: appLocalizationFields.tvOsPrivacyPolicy.nullable(),
+  })
   .refine((input) => APP_LOCALIZATION_FIELDS.some((key) => input[key] !== undefined), {
     message: "Provide at least one field to update",
   });
@@ -164,17 +171,21 @@ const BETA_REVIEW_DETAIL_FIELDS = Object.keys(reviewDetailFields) as Array<
   keyof typeof reviewDetailFields
 >;
 
+// Updates may set optional fields to null to clear them. Apple validates the stored demo
+// account when demoAccountRequired changes, so credentials are not required alongside it.
 const updateBetaReviewDetailInputSchema = z
-  .object({ reviewDetailId: resourceIdSchema, ...reviewDetailFields })
+  .object({
+    reviewDetailId: resourceIdSchema,
+    ...reviewDetailFields,
+    contactLastName: reviewDetailFields.contactLastName.nullable(),
+    contactEmail: reviewDetailFields.contactEmail.nullable(),
+    demoAccountName: reviewDetailFields.demoAccountName.nullable(),
+    demoAccountPassword: reviewDetailFields.demoAccountPassword.nullable(),
+    notes: reviewDetailFields.notes.nullable(),
+  })
   .refine((input) => BETA_REVIEW_DETAIL_FIELDS.some((key) => input[key] !== undefined), {
     message: "Provide at least one field to update",
-  })
-  .refine(
-    (input) =>
-      input.demoAccountRequired !== true ||
-      (input.demoAccountName !== undefined && input.demoAccountPassword !== undefined),
-    { message: "Setting demoAccountRequired to true needs demoAccountName and demoAccountPassword" }
-  );
+  });
 
 const listBetaReviewSubmissionsInputSchema = z.object({
   buildId: resourceIdSchema,
@@ -686,6 +697,15 @@ const limitProperty = {
   maximum: 200,
 };
 
+/** JSON-schema variant of a property that also accepts null, which clears the field. */
+function clearable<T extends { type: string; description: string }>(property: T) {
+  return {
+    ...property,
+    type: [property.type, "null"],
+    description: `${property.description}. Pass null to clear.`,
+  };
+}
+
 const appLocalizationProperties = {
   description: { type: "string", description: "TestFlight description for testers" },
   feedbackEmail: { type: "string", description: "Email address for tester feedback" },
@@ -806,7 +826,11 @@ export const testflightBuildsToolDefinitions = [
       type: "object" as const,
       properties: {
         localizationId: { type: "string", description: "The beta app localization ID" },
-        ...appLocalizationProperties,
+        description: clearable(appLocalizationProperties.description),
+        feedbackEmail: clearable(appLocalizationProperties.feedbackEmail),
+        marketingUrl: clearable(appLocalizationProperties.marketingUrl),
+        privacyPolicyUrl: clearable(appLocalizationProperties.privacyPolicyUrl),
+        tvOsPrivacyPolicy: clearable(appLocalizationProperties.tvOsPrivacyPolicy),
       },
       required: ["localizationId"],
     },
@@ -846,6 +870,11 @@ export const testflightBuildsToolDefinitions = [
       properties: {
         reviewDetailId: { type: "string", description: "The beta App Review detail ID" },
         ...reviewDetailProperties,
+        contactLastName: clearable(reviewDetailProperties.contactLastName),
+        contactEmail: clearable(reviewDetailProperties.contactEmail),
+        demoAccountName: clearable(reviewDetailProperties.demoAccountName),
+        demoAccountPassword: clearable(reviewDetailProperties.demoAccountPassword),
+        notes: clearable(reviewDetailProperties.notes),
       },
       required: ["reviewDetailId"],
     },

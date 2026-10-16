@@ -48,6 +48,11 @@ describe("error sanitization", () => {
     expect(serialized).not.toContain(password);
   });
 
+  it("redacts supplied secrets however short they are", () => {
+    const error = parseAPIError(409, { errors: [{ detail: "password xy rejected" }] });
+    expect(JSON.stringify(formatErrorResponse(error, ["xy"]))).not.toContain("xy");
+  });
+
   it("redacts bearer tokens from plain errors", () => {
     const response = formatErrorResponse(new Error("sent Bearer aaa.bbb.ccc"));
     expect(response.error.message).not.toContain("aaa.bbb.ccc");

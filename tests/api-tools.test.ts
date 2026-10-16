@@ -255,7 +255,47 @@ describe("asc_api_request", () => {
       });
       const result = await call(client, { path: "/v1/apps", paginate: true });
       expect(client.get).toHaveBeenCalledTimes(2);
-      expect(result).toMatchObject({ success: true });
+      expect(result.pagination).toMatchObject({ truncated: true, stopReason: "repeatedNextLink" });
+    });
+
+    it("clamps an explicit page limit so the first page cannot exceed maxItems", async () => {
+      await call(client, { path: "/v1/apps", paginate: true, maxItems: 3, query: { limit: 50 } });
+      expect(client.get.mock.calls[0]?.[1]).toMatchObject({ limit: "3" });
+    });
+  });
+
+  describe("secrets", () => {
+    it("masks demo account passwords in responses", async () => {
+      client.get.mockResolvedValueOnce({
+        data: {
+          type: "appStoreReviewDetails",
+          id: "rd1",
+          attributes: { demoAccountName: "demo", demoAccountPassword: "s3cret-demo" },
+        },
+      });
+      const result = await call(client, { path: "/v1/appStoreVersions/1/appStoreReviewDetail" });
+      expect(JSON.stringify(result)).not.toContain("s3cret-demo");
+      expect(JSON.stringify(result)).toContain("demoAccountName");
+    });
+
+    it("redacts a supplied password that the API echoes in an error", async () => {
+      const { ASCError } = await import("../src/utils/errors.js");
+      client.patch.mockRejectedValueOnce(
+        new ASCError("demoAccountPassword 'abc' is invalid", "API_ERROR", 409, [{ detail: "abc" }])
+      );
+      const result = await call(client, {
+        method: "PATCH",
+        path: "/v1/appStoreReviewDetails/rd1",
+        body: {
+          data: {
+            type: "appStoreReviewDetails",
+            id: "rd1",
+            attributes: { demoAccountPassword: "abc" },
+          },
+        },
+      });
+      expect(result).toMatchObject({ success: false });
+      expect(JSON.stringify(result)).not.toContain("abc");
     });
   });
 });

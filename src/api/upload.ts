@@ -5,7 +5,8 @@
  * 1. Reserve: POST the asset with fileName/fileSize and its parent relationship
  * 2. Upload: PUT each file chunk to the URLs in `uploadOperations`
  * 3. Commit: PATCH `uploaded: true` with the file's MD5 `sourceFileChecksum` (hex)
- * 4. Optionally poll until `assetDeliveryState.state` is COMPLETE or FAILED
+ * 4. Optionally poll until the delivery state is COMPLETE or FAILED
+ *    (`videoDeliveryState` for app previews, `assetDeliveryState` for images)
  */
 
 import * as crypto from "node:crypto";
@@ -27,6 +28,7 @@ export interface UploadedAssetAttributes {
   sourceFileChecksum?: string;
   uploadOperations?: UploadOperation[] | null;
   assetDeliveryState?: AssetDeliveryState | null;
+  videoDeliveryState?: AssetDeliveryState | null;
   [key: string]: unknown;
 }
 
@@ -57,6 +59,14 @@ export interface UploadAssetOptions {
 }
 
 export const DEFAULT_POLL_INTERVAL_MS = 2_000;
+
+/**
+ * Processing state of an uploaded asset. App previews report `videoDeliveryState`;
+ * their `assetDeliveryState` is deprecated and stops at UPLOAD_COMPLETE.
+ */
+export function deliveryStateOf(asset: UploadedAsset): AssetDeliveryState | null | undefined {
+  return asset.attributes.videoDeliveryState ?? asset.attributes.assetDeliveryState;
+}
 export const DEFAULT_POLL_TIMEOUT_MS = 10 * 60_000;
 
 /**
@@ -130,7 +140,7 @@ export async function waitForAssetProcessing(
   while (true) {
     const response = await client.get<ASCResponse<UploadedAsset>>(resourcePath);
     const asset = response.data;
-    const state = asset.attributes.assetDeliveryState;
+    const state = deliveryStateOf(asset);
 
     if (state?.state === "COMPLETE") return asset;
     if (state?.state === "FAILED") {

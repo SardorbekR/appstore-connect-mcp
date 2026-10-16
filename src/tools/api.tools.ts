@@ -32,6 +32,8 @@ const MAX_MAX_ITEMS = 2000;
 const MAX_LISTED_PARAMETERS = 60;
 // Room kept free for the pagination block (cursor URL, stop reason) added after a page is sized
 const PAGINATION_RESERVE_CHARS = 2_000;
+// Attribute values never returned or echoed in errors (typed tools hide them too)
+const SECRET_KEYS = new Set(["demoAccountPassword"]);
 
 /** Operations whose responses are files, with the typed tool that handles them. */
 const FILE_RESPONSE_TOOLS: Record<string, string> = {
@@ -357,6 +359,31 @@ function validateBody(
 // Execution and output shaping
 // ============================================================================
 
+/** Deep copy with secret attribute values replaced. */
+function maskSecrets(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(maskSecrets);
+  if (!isRecord(value)) return value;
+  return Object.fromEntries(
+    Object.entries(value).map(([key, child]) => [
+      key,
+      SECRET_KEYS.has(key) && typeof child === "string" ? "[REDACTED]" : maskSecrets(child),
+    ])
+  );
+}
+
+/** Secret values supplied in the tool input, so errors that echo them can be redacted. */
+function secretsIn(value: unknown, found: string[] = []): string[] {
+  if (Array.isArray(value)) {
+    for (const item of value) secretsIn(item, found);
+  } else if (isRecord(value)) {
+    for (const [key, child] of Object.entries(value)) {
+      if (SECRET_KEYS.has(key) && typeof child === "string") found.push(child);
+      else secretsIn(child, found);
+    }
+  }
+  return found;
+}
+
 function serializedSize(value: unknown): number {
   // Must match how src/index.ts serializes tool results
   return JSON.stringify(value, null, 2).length;
@@ -400,9 +427,10 @@ function shapeSingle(
   document: unknown,
   maxChars: number
 ): Record<string, unknown> {
-  const result = { success: true, operation, response: document ?? null };
+  const masked = maskSecrets(document ?? null);
+  const result = { success: true, operation, response: masked };
   const size = serializedSize(result);
-  return size > maxChars ? tooLargeSummary(operation, document, size, maxChars) : result;
+  return size > maxChars ? tooLargeSummary(operation, masked, size, maxChars) : result;
 }
 
 async function paginate(
@@ -440,17 +468,24 @@ async function paginate(
     pagination: {
       pages,
       returned: (response.data as unknown[]).length,
-      truncated: Boolean(cursor),
-      ...(cursor ? { cursor, stopReason } : {}),
+      truncated: Boolean(stopReason),
+      ...(cursor ? { cursor } : {}),
+      ...(stopReason ? { stopReason } : {}),
     },
   });
 
   while (true) {
     const url = `${API_ORIGIN}${withQuery(current.path, current.query)}`;
-    if (seen.has(url)) break;
+    if (seen.has(url)) {
+      // Apple returned a next link already fetched; the result may be incomplete
+      stopReason = "repeatedNextLink";
+      break;
+    }
     seen.add(url);
 
-    const page = await client.get<JsonApiDocument>(current.path, current.query);
+    const page = maskSecrets(
+      await client.get<JsonApiDocument>(current.path, current.query)
+    ) as JsonApiDocument;
     const pageData = Array.isArray(page.data) ? page.data : page.data ? [page.data] : [];
     const pageIncluded = page.included ?? [];
 
@@ -578,6 +613,9 @@ async function executeGet(
     const limitParam = operation.parameters?.find((param) => param.name === "limit");
     if (limitParam && query.limit === undefined) {
       query.limit = String(Math.min(maxItems, limitParam.maximum ?? 200));
+    } else if (query.limit !== undefined && Number(query.limit) > maxItems) {
+      // A page larger than maxItems would overshoot it on the first page
+      query.limit = String(maxItems);
     }
     return paginate(client, operation, { path, query }, maxItems, maxChars);
   }
@@ -606,7 +644,7 @@ export async function apiRequest(client: AppStoreConnectClient, input: unknown):
     await client.delete(target, params.body);
     return { success: true, operation: request.label, response: null };
   } catch (error) {
-    return formatErrorResponse(error);
+    return formatErrorResponse(error, secretsIn(input));
   }
 }
 

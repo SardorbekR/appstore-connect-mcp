@@ -7,7 +7,7 @@ import { extname } from "node:path";
 import { z } from "zod";
 import type { AppStoreConnectClient } from "../api/client.js";
 import type { ASCListResponse, ASCResponse } from "../api/types.js";
-import { type UploadedAsset, uploadAsset } from "../api/upload.js";
+import { type UploadedAsset, deliveryStateOf, uploadAsset } from "../api/upload.js";
 import { ASCError, ValidationError, formatErrorResponse } from "../utils/errors.js";
 import { resourceIdSchema, validateInput } from "../utils/validation.js";
 import type { ToolModule } from "./types.js";
@@ -41,6 +41,7 @@ interface PreviewResource {
     mimeType?: string;
     previewFrameTimeCode?: string | null;
     assetDeliveryState?: { state?: string } | null;
+    videoDeliveryState?: { state?: string } | null;
   };
 }
 
@@ -213,7 +214,8 @@ function formatPreview(preview: PreviewResource) {
     fileSize: preview.attributes.fileSize,
     mimeType: preview.attributes.mimeType,
     previewFrameTimeCode: preview.attributes.previewFrameTimeCode,
-    deliveryState: preview.attributes.assetDeliveryState?.state,
+    deliveryState: (preview.attributes.videoDeliveryState ?? preview.attributes.assetDeliveryState)
+      ?.state,
   };
 }
 
@@ -222,7 +224,7 @@ function formatUploadedAsset(asset: UploadedAsset) {
     id: asset.id,
     fileName: asset.attributes.fileName,
     fileSize: asset.attributes.fileSize,
-    deliveryState: asset.attributes.assetDeliveryState?.state,
+    deliveryState: deliveryStateOf(asset)?.state,
   };
 }
 

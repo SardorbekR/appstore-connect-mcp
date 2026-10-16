@@ -152,6 +152,34 @@ describe("subscription offer code tools", () => {
       expectContract(client);
     });
 
+    it("creates a free-trial offer with territory-only prices", async () => {
+      client.post.mockResolvedValueOnce({ data: offerCode });
+
+      await createSubscriptionOfferCode(asClient(client), {
+        ...paidOfferInput,
+        offerMode: "FREE_TRIAL",
+        prices: [{ territoryId: "USA" }],
+      });
+
+      expect(client.post.mock.calls[0]?.[1].included).toEqual([
+        {
+          type: "subscriptionOfferCodePrices",
+          id: "${price-1}",
+          relationships: { territory: { data: { type: "territories", id: "USA" } } },
+        },
+      ]);
+      expectContract(client);
+    });
+
+    it("refuses a paid offer price without a price point", async () => {
+      const result = await createSubscriptionOfferCode(asClient(client), {
+        ...paidOfferInput,
+        prices: [{ territoryId: "USA" }],
+      });
+      expect(result).toMatchObject({ success: false, error: { code: "VALIDATION_ERROR" } });
+      expect(client.post).not.toHaveBeenCalled();
+    });
+
     it("refuses a paid offer with no prices before calling the API", async () => {
       const result = await createSubscriptionOfferCode(asClient(client), paidOfferInput);
 

@@ -75,9 +75,10 @@ const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expiration date m
 
 const PAID_OFFER_MODES: ReadonlySet<string> = new Set(["PAY_AS_YOU_GO", "PAY_UP_FRONT"]);
 
+// Free-trial codes list territories only; paid codes also need a price point per territory
 const offerCodePriceSchema = z.object({
   territoryId: territoryIdSchema,
-  pricePointId: resourceIdSchema,
+  pricePointId: resourceIdSchema.optional(),
 });
 
 const listSubscriptionOfferCodesInputSchema = z.object({
@@ -105,10 +106,25 @@ const createSubscriptionOfferCodeInputSchema = z
   })
   .superRefine((params, ctx) => {
     const prices = params.prices ?? [];
-    if (PAID_OFFER_MODES.has(params.offerMode) && prices.length === 0) {
+    const paid = PAID_OFFER_MODES.has(params.offerMode);
+    if (paid && prices.length === 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Paid offer codes need at least one price",
+        path: ["prices"],
+      });
+    }
+    if (paid && prices.some((price) => price.pricePointId === undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Paid offer codes need a pricePointId for every territory",
+        path: ["prices"],
+      });
+    }
+    if (!paid && prices.some((price) => price.pricePointId !== undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "FREE_TRIAL offer codes take territories only; omit pricePointId",
         path: ["prices"],
       });
     }
@@ -303,9 +319,13 @@ export async function createSubscriptionOfferCode(
           id: tempPriceId(index),
           relationships: {
             territory: { data: { type: "territories", id: price.territoryId } },
-            subscriptionPricePoint: {
-              data: { type: "subscriptionPricePoints", id: price.pricePointId },
-            },
+            ...(price.pricePointId !== undefined
+              ? {
+                  subscriptionPricePoint: {
+                    data: { type: "subscriptionPricePoints", id: price.pricePointId },
+                  },
+                }
+              : {}),
           },
         })),
       }
@@ -523,17 +543,18 @@ const offerCodeProperties = {
   },
   prices: {
     type: "array",
-    description: "Per-territory prices, required for paid offers. Each territory may appear once.",
+    description:
+      "Per-territory prices. Paid offers need territoryId and pricePointId for each territory; FREE_TRIAL offers list territoryId only. Each territory may appear once.",
     items: {
       type: "object",
       properties: {
         territoryId: { type: "string", description: "3-letter territory code, e.g. USA" },
         pricePointId: {
           type: "string",
-          description: "Subscription price point ID for that territory",
+          description: "Subscription price point ID for that territory (paid offers only)",
         },
       },
-      required: ["territoryId", "pricePointId"],
+      required: ["territoryId"],
     },
   },
 };

@@ -118,17 +118,21 @@ const createReviewDetailInputSchema = z
     { message: "demoAccountRequired needs demoAccountName and demoAccountPassword" }
   );
 
+// Updates may set optional fields to null to clear them. Apple validates the stored demo
+// account when demoAccountRequired changes, so credentials are not required alongside it.
 const updateReviewDetailInputSchema = z
-  .object({ reviewDetailId: resourceIdSchema, ...reviewDetailFields })
+  .object({
+    reviewDetailId: resourceIdSchema,
+    ...reviewDetailFields,
+    contactLastName: reviewDetailFields.contactLastName.nullable(),
+    contactEmail: reviewDetailFields.contactEmail.nullable(),
+    demoAccountName: reviewDetailFields.demoAccountName.nullable(),
+    demoAccountPassword: reviewDetailFields.demoAccountPassword.nullable(),
+    notes: reviewDetailFields.notes.nullable(),
+  })
   .refine((input) => Object.keys(reviewDetailFields).some((key) => key in input), {
     message: "Provide at least one field to update",
-  })
-  .refine(
-    (input) =>
-      input.demoAccountRequired !== true ||
-      (input.demoAccountName !== undefined && input.demoAccountPassword !== undefined),
-    { message: "Setting demoAccountRequired to true needs demoAccountName and demoAccountPassword" }
-  );
+  });
 
 // ============================================================================
 // Helpers
@@ -376,6 +380,15 @@ export async function updateReviewDetail(
 // Definitions
 // ============================================================================
 
+/** JSON-schema variant of a property that also accepts null, which clears the field. */
+function clearable<T extends { type: string; description: string }>(property: T) {
+  return {
+    ...property,
+    type: [property.type, "null"],
+    description: `${property.description}. Pass null to clear.`,
+  };
+}
+
 const reviewDetailProperties = {
   contactFirstName: { type: "string", description: "App Review contact first name" },
   contactLastName: { type: "string", description: "App Review contact last name" },
@@ -497,6 +510,11 @@ export const versionAdminToolDefinitions = [
       properties: {
         reviewDetailId: { type: "string", description: "The App Store review detail ID" },
         ...reviewDetailProperties,
+        contactLastName: clearable(reviewDetailProperties.contactLastName),
+        contactEmail: clearable(reviewDetailProperties.contactEmail),
+        demoAccountName: clearable(reviewDetailProperties.demoAccountName),
+        demoAccountPassword: clearable(reviewDetailProperties.demoAccountPassword),
+        notes: clearable(reviewDetailProperties.notes),
       },
       required: ["reviewDetailId"],
     },

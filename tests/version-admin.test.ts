@@ -201,6 +201,26 @@ describe("version admin tools", () => {
       expectContract(client);
     });
 
+    it("clears a field with null and flips demoAccountRequired without resending credentials", async () => {
+      client.patch.mockResolvedValueOnce({ data: reviewDetail });
+
+      const result = await updateReviewDetail(asClient(client), {
+        reviewDetailId: "rd1",
+        notes: null,
+        demoAccountRequired: true,
+      });
+
+      expect(result).toMatchObject({ success: true });
+      expect(client.patch).toHaveBeenCalledWith("/appStoreReviewDetails/rd1", {
+        data: {
+          type: "appStoreReviewDetails",
+          id: "rd1",
+          attributes: { demoAccountRequired: true, notes: null },
+        },
+      });
+      expectContract(client);
+    });
+
     it("never puts the demo password in an error", async () => {
       const { ASCError } = await import("../src/utils/errors.js");
       client.patch.mockRejectedValueOnce(

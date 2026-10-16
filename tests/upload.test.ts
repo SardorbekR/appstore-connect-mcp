@@ -125,6 +125,37 @@ describe("uploadAsset", () => {
     expect(client.post).not.toHaveBeenCalled();
   });
 
+  it("reads videoDeliveryState for app previews, whose assetDeliveryState stays at UPLOAD_COMPLETE", async () => {
+    const preview = (video: string, errors?: Array<{ description: string }>) => ({
+      data: {
+        type: "appPreviews",
+        id: "asset-1",
+        attributes: {
+          assetDeliveryState: { state: "UPLOAD_COMPLETE" },
+          videoDeliveryState: { state: video, errors },
+        },
+      },
+    });
+    const wait = { ...options(), waitForProcessing: true, pollIntervalMs: 1, pollTimeoutMs: 50 };
+
+    client.get.mockResolvedValueOnce(preview("COMPLETE"));
+    await expect(
+      uploadAsset(client as unknown as AppStoreConnectClient, wait)
+    ).resolves.toMatchObject({
+      id: "asset-1",
+    });
+
+    client.get.mockResolvedValueOnce(
+      preview("FAILED", [{ description: "Unsupported frame rate" }])
+    );
+    await expect(
+      uploadAsset(client as unknown as AppStoreConnectClient, wait)
+    ).rejects.toMatchObject({
+      code: "UPLOAD_FAILED",
+      message: expect.stringContaining("Unsupported frame rate"),
+    });
+  });
+
   it("polls until COMPLETE when asked to wait", async () => {
     client.get
       .mockResolvedValueOnce(state("UPLOAD_COMPLETE"))

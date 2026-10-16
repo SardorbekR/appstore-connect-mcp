@@ -18,8 +18,12 @@ function getSensitivePatterns(): RegExp[] {
  * so only the configured issuer ID is redacted rather than every UUID.
  */
 function getSensitiveValues(extra: readonly string[] = []): string[] {
-  const values = [process.env.APP_STORE_CONNECT_ISSUER_ID ?? "", ...extra];
-  return values.filter((value) => value.length >= 4);
+  const issuerId = process.env.APP_STORE_CONNECT_ISSUER_ID ?? "";
+  // Explicit secrets (e.g. a demo password) are redacted at any length
+  return [
+    ...(issuerId.length >= 4 ? [issuerId] : []),
+    ...extra.filter((value) => value.length > 0),
+  ];
 }
 
 export function sanitizeMessage(message: string, extra: readonly string[] = []): string {
