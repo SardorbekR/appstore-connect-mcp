@@ -1432,43 +1432,31 @@ export interface CreateSubscriptionPromotionalOfferRequest {
       };
     };
   };
-  included?: Array<{
-    type: "subscriptionPromotionalOfferPrices";
-    id: string;
-    attributes: Record<string, never>;
-    relationships: {
-      subscriptionPricePoint: { data: { type: "subscriptionPricePoints"; id: string } };
-      territory: { data: { type: "territories"; id: string } };
-    };
-  }>;
+  included?: SubscriptionPromotionalOfferPriceInlineCreate[];
 }
 
+/** An inline promotional offer price; free trials carry a territory without a price point. */
+export interface SubscriptionPromotionalOfferPriceInlineCreate {
+  type: "subscriptionPromotionalOfferPrices";
+  id: string;
+  relationships: {
+    subscriptionPricePoint?: { data: { type: "subscriptionPricePoints"; id: string } };
+    territory: { data: { type: "territories"; id: string } };
+  };
+}
+
+/** Apple accepts only a replacement price list when updating a promotional offer. */
 export interface UpdateSubscriptionPromotionalOfferRequest {
   data: {
     type: "subscriptionPromotionalOffers";
     id: string;
-    attributes: {
-      name?: string;
-      offerCode?: string;
-      duration?: SubscriptionOfferDuration;
-      offerMode?: SubscriptionOfferMode;
-      numberOfPeriods?: number;
-    };
-    relationships?: {
+    relationships: {
       prices: {
         data: Array<{ type: "subscriptionPromotionalOfferPrices"; id: string }>;
       };
     };
   };
-  included?: Array<{
-    type: "subscriptionPromotionalOfferPrices";
-    id: string;
-    attributes: Record<string, never>;
-    relationships: {
-      subscriptionPricePoint: { data: { type: "subscriptionPricePoints"; id: string } };
-      territory: { data: { type: "territories"; id: string } };
-    };
-  }>;
+  included?: SubscriptionPromotionalOfferPriceInlineCreate[];
 }
 
 export interface GetSubscriptionAvailabilityResponse {

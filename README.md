@@ -72,7 +72,7 @@ Then use `"command": "asc-mcp"` in your client config. A global install does not
 
 - **npx:** restart your MCP client. A running client keeps the version it started with.
 - **Global install:** `npm install -g asc-mcp@latest`, then restart the client.
-- **Pin a version** for stability with `asc-mcp@2.0.2` (or any version) instead of `asc-mcp@latest`.
+- **Pin a version** for stability with `asc-mcp@2.0.3` (or any version) instead of `asc-mcp@latest`.
 
 Once a day the server asks npm for the latest version in the background, without delaying startup. If yours is older, the next time the server starts it tells your assistant, which mentions it to you once. It sends nothing but that request, and installs nothing. Set `ASC_DISABLE_UPDATE_CHECK=1` to turn it off.
 

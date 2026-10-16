@@ -2,6 +2,7 @@
  * Subscription Tools - Manage auto-renewable subscriptions and subscription groups
  */
 
+import { currentTerritoryIds, listAvailableTerritories } from "../api/availability.js";
 import type { AppStoreConnectClient } from "../api/client.js";
 import type {
   ASCListResponse,
@@ -24,6 +25,7 @@ import type {
   SubscriptionPricePoint,
   SubscriptionPromotionalOffer,
   SubscriptionPromotionalOfferPrice,
+  SubscriptionPromotionalOfferPriceInlineCreate,
   Territory,
   UpdateSubscriptionGroupLocalizationRequest,
   UpdateSubscriptionGroupRequest,
@@ -867,17 +869,12 @@ export async function getSubscriptionAvailability(
     const params = validateInput(getSubscriptionAvailabilityInputSchema, input);
 
     const response = await client.get<GetSubscriptionAvailabilityResponse>(
-      `/subscriptions/${params.subscriptionId}/subscriptionAvailability`,
-      {
-        include: "availableTerritories",
-        "fields[territories]": "currency",
-      }
+      `/subscriptions/${params.subscriptionId}/subscriptionAvailability`
     );
-
-    const included = (response.included ?? []) as Territory[];
-    const territories = included
-      .filter((item) => (item as { type: string }).type === "territories")
-      .map((t) => ({ id: t.id, currency: t.attributes.currency }));
+    const territories = await listAvailableTerritories(
+      client,
+      `/subscriptionAvailabilities/${response.data.id}`
+    );
 
     return {
       success: true,
@@ -902,6 +899,14 @@ export async function setSubscriptionAvailability(
 ): Promise<unknown> {
   try {
     const params = validateInput(setSubscriptionAvailabilityInputSchema, input);
+    // Apple requires the full territory list; without one, keep the current territories
+    const territories =
+      params.territories ??
+      (await currentTerritoryIds(
+        client,
+        `/subscriptions/${params.subscriptionId}/subscriptionAvailability`,
+        "/subscriptionAvailabilities"
+      ));
 
     const requestBody: CreateSubscriptionAvailabilityRequest = {
       data: {
@@ -913,13 +918,9 @@ export async function setSubscriptionAvailability(
           subscription: {
             data: { type: "subscriptions", id: params.subscriptionId },
           },
-          ...(params.territories && params.territories.length > 0
-            ? {
-                availableTerritories: {
-                  data: params.territories.map((id) => ({ type: "territories" as const, id })),
-                },
-              }
-            : {}),
+          availableTerritories: {
+            data: territories.map((id) => ({ type: "territories" as const, id })),
+          },
         },
       },
     };
@@ -935,7 +936,8 @@ export async function setSubscriptionAvailability(
         id: response.data.id,
         subscriptionId: params.subscriptionId,
         availableInNewTerritories: response.data.attributes.availableInNewTerritories,
-        territoriesCount: params.territories?.length ?? 0,
+        territoriesCount: territories.length,
+        keptCurrentTerritories: params.territories === undefined,
       },
     };
   } catch (error) {
@@ -995,23 +997,27 @@ export async function createSubscriptionPrice(
 // Promotional offer helpers
 // ---------------------------------------------------------------------------
 
-function buildPriceIncludes(prices: Array<{ territory: string; pricePointId: string }>): {
+function buildPriceIncludes(prices: Array<{ territory: string; pricePointId?: string }>): {
   pricesData: Array<{ type: "subscriptionPromotionalOfferPrices"; id: string }>;
-  included: CreateSubscriptionPromotionalOfferRequest["included"];
+  included: SubscriptionPromotionalOfferPriceInlineCreate[];
 } {
   const pricesData: Array<{ type: "subscriptionPromotionalOfferPrices"; id: string }> = [];
-  const included: NonNullable<CreateSubscriptionPromotionalOfferRequest["included"]> = [];
+  const included: SubscriptionPromotionalOfferPriceInlineCreate[] = [];
   for (const entry of prices) {
     const tempId = `\${${entry.territory}-promo}`;
     pricesData.push({ type: "subscriptionPromotionalOfferPrices", id: tempId });
     included.push({
       type: "subscriptionPromotionalOfferPrices",
       id: tempId,
-      attributes: {},
       relationships: {
-        subscriptionPricePoint: {
-          data: { type: "subscriptionPricePoints", id: entry.pricePointId },
-        },
+        // Free-trial prices name a territory only
+        ...(entry.pricePointId !== undefined
+          ? {
+              subscriptionPricePoint: {
+                data: { type: "subscriptionPricePoints" as const, id: entry.pricePointId },
+              },
+            }
+          : {}),
         territory: { data: { type: "territories", id: entry.territory } },
       },
     });
@@ -1115,25 +1121,15 @@ export async function updatePromotionalOffer(
   try {
     const params = validateInput(updatePromotionalOfferInputSchema, input);
 
+    const { pricesData, included } = buildPriceIncludes(params.prices);
     const requestBody: UpdateSubscriptionPromotionalOfferRequest = {
       data: {
         type: "subscriptionPromotionalOffers",
         id: params.promotionalOfferId,
-        attributes: {
-          name: params.name,
-          offerCode: params.offerCode,
-          duration: params.duration,
-          offerMode: params.offerMode,
-          numberOfPeriods: params.periodCount,
-        },
+        relationships: { prices: { data: pricesData } },
       },
+      included,
     };
-
-    if (params.prices) {
-      const { pricesData, included } = buildPriceIncludes(params.prices);
-      requestBody.data.relationships = { prices: { data: pricesData } };
-      if (included && included.length > 0) requestBody.included = included;
-    }
 
     const response = await client.patch<ASCResponse<SubscriptionPromotionalOffer>>(
       `/subscriptionPromotionalOffers/${params.promotionalOfferId}`,
@@ -1706,7 +1702,7 @@ export const subscriptionToolDefinitions = [
           type: "array",
           items: { type: "string" },
           description:
-            "Explicit list of territory IDs to make available (3-letter codes, e.g., ['USA', 'GBR', 'BRA']). If omitted, only the availableInNewTerritories flag is set.",
+            "Full list of territory IDs to make available (3-letter codes, e.g., ['USA', 'GBR', 'BRA']); it replaces the current list. If omitted, the current territories are kept and only availableInNewTerritories changes.",
         },
       },
       required: ["subscriptionId", "availableInNewTerritories"],
@@ -1764,7 +1760,7 @@ export const subscriptionToolDefinitions = [
   {
     name: "create_promotional_offer",
     description:
-      "Create a promotional offer for a subscription. Use offerMode FREE_TRIAL for a trial offer (no prices needed). Use PAY_AS_YOU_GO or PAY_UP_FRONT for discounted paid offers and supply prices per territory. The offerCode is the string customers redeem.",
+      "Create a promotional offer for a subscription. Use offerMode FREE_TRIAL for a trial offer (prices optional: territories only, no price points). Use PAY_AS_YOU_GO or PAY_UP_FRONT for discounted paid offers and supply a price point per territory. The offerCode is the string customers redeem. Name, code, duration, mode, and periods cannot be changed later.",
     annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object" as const,
@@ -1796,14 +1792,14 @@ export const subscriptionToolDefinitions = [
             "FREE_TRIAL: free for the duration. PAY_AS_YOU_GO: discounted recurring price. PAY_UP_FRONT: discounted upfront price.",
         },
         periodCount: {
-          type: "number",
-          description: "Number of periods for PAY_AS_YOU_GO or PAY_UP_FRONT offers",
+          type: "integer",
+          description: "Number of periods (required for every mode; 1 for a typical free trial)",
           minimum: 1,
         },
         prices: {
           type: "array",
           description:
-            "Price per territory (required for PAY_AS_YOU_GO / PAY_UP_FRONT; omit for FREE_TRIAL)",
+            "Per-territory entries. PAY_AS_YOU_GO / PAY_UP_FRONT: required, each with pricePointId. FREE_TRIAL: optional territories without pricePointId.",
           items: {
             type: "object",
             properties: {
@@ -1813,61 +1809,44 @@ export const subscriptionToolDefinitions = [
               },
               pricePointId: {
                 type: "string",
-                description: "Subscription price point ID for this territory",
+                description: "Subscription price point ID for this territory (paid offers only)",
               },
             },
-            required: ["territory", "pricePointId"],
+            required: ["territory"],
           },
         },
       },
-      required: ["subscriptionId", "name", "offerCode", "duration", "offerMode"],
+      required: ["subscriptionId", "name", "offerCode", "duration", "offerMode", "periodCount"],
     },
   },
   {
     name: "update_promotional_offer",
     description:
-      "Update an existing promotional offer's attributes or prices. Supply only the fields you want to change. To update prices, provide the full new prices array.",
+      "Replace a promotional offer's per-territory price list. Apple allows no other changes: to change the name, code, duration, mode, or periods, delete the offer and create a new one.",
     annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object" as const,
       properties: {
         promotionalOfferId: { type: "string", description: "The promotional offer ID to update" },
-        name: { type: "string", description: "Updated internal reference name" },
-        offerCode: { type: "string", description: "Updated redemption code" },
-        duration: {
-          type: "string",
-          enum: [
-            "THREE_DAYS",
-            "ONE_WEEK",
-            "TWO_WEEKS",
-            "ONE_MONTH",
-            "TWO_MONTHS",
-            "THREE_MONTHS",
-            "SIX_MONTHS",
-            "ONE_YEAR",
-          ],
-          description: "Updated offer duration",
-        },
-        offerMode: {
-          type: "string",
-          enum: ["FREE_TRIAL", "PAY_AS_YOU_GO", "PAY_UP_FRONT"],
-          description: "Updated offer mode",
-        },
-        periodCount: { type: "number", description: "Updated period count", minimum: 1 },
         prices: {
           type: "array",
-          description: "Replacement prices (full list, per territory)",
+          minItems: 1,
+          description:
+            "Full replacement price list. Paid offers: territory and pricePointId per entry. Free trials: territory only.",
           items: {
             type: "object",
             properties: {
-              territory: { type: "string" },
-              pricePointId: { type: "string" },
+              territory: { type: "string", description: "3-letter territory code (e.g., USA)" },
+              pricePointId: {
+                type: "string",
+                description: "Subscription price point ID for this territory (paid offers only)",
+              },
             },
-            required: ["territory", "pricePointId"],
+            required: ["territory"],
           },
         },
       },
-      required: ["promotionalOfferId"],
+      required: ["promotionalOfferId", "prices"],
     },
   },
   {

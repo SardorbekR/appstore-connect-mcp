@@ -3,6 +3,7 @@
  * consumable, and non-renewing) via Apple's In-App Purchases v2 API.
  */
 
+import { currentTerritoryIds, listAvailableTerritories } from "../api/availability.js";
 import type { AppStoreConnectClient } from "../api/client.js";
 import type {
   ASCListResponse,
@@ -515,17 +516,12 @@ export async function getInAppPurchaseAvailability(
     const params = validateInput(getInAppPurchaseAvailabilityInputSchema, input);
 
     const response = await client.get<GetInAppPurchaseAvailabilityResponse>(
-      `/v2/inAppPurchases/${params.inAppPurchaseId}/inAppPurchaseAvailability`,
-      {
-        include: "availableTerritories",
-        "fields[territories]": "currency",
-      }
+      `/v2/inAppPurchases/${params.inAppPurchaseId}/inAppPurchaseAvailability`
     );
-
-    const included = (response.included ?? []) as Territory[];
-    const territories = included
-      .filter((item) => (item as { type: string }).type === "territories")
-      .map((t) => ({ id: t.id, currency: t.attributes.currency }));
+    const territories = await listAvailableTerritories(
+      client,
+      `/inAppPurchaseAvailabilities/${response.data.id}`
+    );
 
     return {
       success: true,
@@ -550,6 +546,14 @@ export async function setInAppPurchaseAvailability(
 ): Promise<unknown> {
   try {
     const params = validateInput(setInAppPurchaseAvailabilityInputSchema, input);
+    // Apple requires the full territory list; without one, keep the current territories
+    const territories =
+      params.territories ??
+      (await currentTerritoryIds(
+        client,
+        `/v2/inAppPurchases/${params.inAppPurchaseId}/inAppPurchaseAvailability`,
+        "/inAppPurchaseAvailabilities"
+      ));
 
     const requestBody: CreateInAppPurchaseAvailabilityRequest = {
       data: {
@@ -561,13 +565,9 @@ export async function setInAppPurchaseAvailability(
           inAppPurchase: {
             data: { type: "inAppPurchases", id: params.inAppPurchaseId },
           },
-          ...(params.territories && params.territories.length > 0
-            ? {
-                availableTerritories: {
-                  data: params.territories.map((id) => ({ type: "territories" as const, id })),
-                },
-              }
-            : {}),
+          availableTerritories: {
+            data: territories.map((id) => ({ type: "territories" as const, id })),
+          },
         },
       },
     };
@@ -583,7 +583,8 @@ export async function setInAppPurchaseAvailability(
         id: response.data.id,
         inAppPurchaseId: params.inAppPurchaseId,
         availableInNewTerritories: response.data.attributes.availableInNewTerritories,
-        territoriesCount: params.territories?.length ?? 0,
+        territoriesCount: territories.length,
+        keptCurrentTerritories: params.territories === undefined,
       },
     };
   } catch (error) {
@@ -1145,7 +1146,7 @@ export const inAppPurchaseToolDefinitions = [
           type: "array",
           items: { type: "string" },
           description:
-            "Territory codes to make the purchase available in (e.g., ['USA', 'GBR']). Omit to keep all territories.",
+            "Full list of territory codes to make the purchase available in (e.g., ['USA', 'GBR']); it replaces the current list. Omit to keep the current territories and change only availableInNewTerritories.",
         },
       },
       required: ["inAppPurchaseId", "availableInNewTerritories"],
@@ -1154,7 +1155,7 @@ export const inAppPurchaseToolDefinitions = [
   {
     name: "submit_in_app_purchase_for_review",
     description:
-      "Submit an in-app purchase to App Review. This is an outward-facing action: the purchase must already have metadata, a localization, a price, and availability set. App Store Connect also typically requires a review screenshot on the in-app purchase before it can pass review — uploading review screenshots is NOT covered by these tools, so add one in App Store Connect if submission fails for a missing screenshot. Can be submitted independently of an app version.",
+      "Submit an in-app purchase to App Review. This is an outward-facing action: the purchase must already have metadata, a localization, a price, and availability set. App Store Connect also typically requires a review screenshot on the in-app purchase before it can pass review; upload one with upload_iap_review_screenshot. Can be submitted independently of an app version.",
     annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object" as const,
