@@ -7,12 +7,16 @@
 #
 # Release: bump package.json, package-lock.json, server.json (both versions) and SERVER_VERSION
 # in src/index.ts, merge to main, then: git tag vX.Y.Z && git push origin vX.Y.Z
+#
+# Recovery: if a run fails after npm published (e.g. the MCP Registry step), run this workflow
+# manually on main ("Run workflow"); steps that already happened are skipped.
 
 name: Publish
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -46,9 +50,14 @@ jobs:
 
       - run: npm ci
 
-      - name: Check the tag matches every version field
+      - name: Check every version field agrees (and matches the tag on tag pushes)
         run: |
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          TAG_VERSION="$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF_NAME" != "v$TAG_VERSION" ]; then
+            echo "Version mismatch: tag $GITHUB_REF_NAME, package.json $TAG_VERSION"
+            exit 1
+          fi
+          echo "VERSION=$TAG_VERSION" >> "$GITHUB_ENV"
           for found in \
             "$(node -p "require('./package.json').version")" \
             "$(node -p "require('./package-lock.json').version")" \
@@ -68,7 +77,23 @@ jobs:
       - run: npm run build
 
       - name: Publish to npm
-        run: npm publish --access public
+        run: |
+          if curl -sfo /dev/null "https://registry.npmjs.org/asc-mcp/$VERSION"; then
+            echo "asc-mcp@$VERSION is already on npm; skipping"
+          else
+            npm publish --access public
+          fi
+
+      # npm can take a few minutes to serve a new version, and the MCP Registry checks it exists
+      - name: Wait until npm serves the version
+        run: |
+          for attempt in $(seq 1 40); do
+            if curl -sfo /dev/null "https://registry.npmjs.org/asc-mcp/$VERSION"; then exit 0; fi
+            echo "asc-mcp@$VERSION not visible yet (attempt $attempt)"
+            sleep 15
+          done
+          echo "asc-mcp@$VERSION did not appear on npm within 10 minutes"
+          exit 1
 
       - name: Install mcp-publisher
         run: |
