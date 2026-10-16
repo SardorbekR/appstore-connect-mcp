@@ -323,9 +323,11 @@ export async function listEncryptionDeclarations(
   try {
     const params = validateInput(listEncryptionDeclarationsInputSchema, input);
 
+    // The spec also lists GET /v1/apps/{id}/appEncryptionDeclarations, but the live API
+    // answers 404 "relationship does not exist" (verified 2026-10-16); filter[app] works.
     const response = await client.get<ASCListResponse<EncryptionDeclarationResource>>(
-      `/apps/${params.appId}/appEncryptionDeclarations`,
-      { limit: params.limit }
+      "/appEncryptionDeclarations",
+      { "filter[app]": params.appId, limit: params.limit }
     );
 
     return {

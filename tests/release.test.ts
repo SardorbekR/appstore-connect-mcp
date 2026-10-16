@@ -195,7 +195,10 @@ describe("release tools", () => {
 
       const result = await listEncryptionDeclarations(asClient(client), { appId: "1", limit: 10 });
 
-      expect(client.get).toHaveBeenCalledWith("/apps/1/appEncryptionDeclarations", { limit: 10 });
+      expect(client.get).toHaveBeenCalledWith("/appEncryptionDeclarations", {
+        "filter[app]": "1",
+        limit: 10,
+      });
       expect(result).toMatchObject({
         success: true,
         data: [{ id: "d1", state: "IN_REVIEW" }],
