@@ -1,0 +1,81 @@
+# Publishes a release when a version tag (e.g. v2.0.1) is pushed.
+#
+# npm: trusted publishing (OIDC) -- no npm token or 2FA prompt; npm adds provenance.
+#   Configure once on npmjs.com: asc-mcp > Settings > Trusted publishing > GitHub Actions,
+#   user SardorbekR, repository appstore-connect-mcp, workflow publish.yml, environment release.
+# MCP Registry: GitHub OIDC login for the io.github.SardorbekR namespace.
+#
+# Release: bump package.json, package-lock.json, server.json (both versions) and SERVER_VERSION
+# in src/index.ts, merge to main, then: git tag vX.Y.Z && git push origin vX.Y.Z
+
+name: Publish
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false # never use caching in release builds
+
+      - name: Check npm supports trusted publishing (11.5.1 or later)
+        run: |
+          npm --version
+          node -e '
+            const [major, minor, patch] = process.argv[1].split(".").map(Number);
+            const ok = major > 11 || (major === 11 && (minor > 5 || (minor === 5 && patch >= 1)));
+            if (!ok) { console.error("npm " + process.argv[1] + " is too old"); process.exit(1); }
+          ' "$(npm --version)"
+
+      - run: npm ci
+
+      - name: Check the tag matches every version field
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          for found in \
+            "$(node -p "require('./package.json').version")" \
+            "$(node -p "require('./package-lock.json').version")" \
+            "$(node -p "require('./server.json').version")" \
+            "$(node -p "require('./server.json').packages[0].version")" \
+            "$(sed -n 's/^const SERVER_VERSION = "\(.*\)";$/\1/p' src/index.ts)"; do
+            if [ "$found" != "$TAG_VERSION" ]; then
+              echo "Version mismatch: tag $GITHUB_REF_NAME, found $found"
+              exit 1
+            fi
+          done
+
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run check-openapi
+      - run: npm run build
+
+      - name: Publish to npm
+        run: npm publish --access public
+
+      - name: Install mcp-publisher
+        run: |
+          curl -sSfL "https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_linux_amd64.tar.gz" \
+            | tar xz mcp-publisher
+
+      - name: Publish to the MCP Registry
+        run: |
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish
