@@ -17,7 +17,7 @@ import { ConfigError, formatErrorResponse } from "./utils/errors.js";
 
 // Server metadata
 const SERVER_NAME = "asc-mcp";
-const SERVER_VERSION = "2.0.2";
+const SERVER_VERSION = "2.0.3";
 
 /**
  * Initialize and run the MCP server
