@@ -17,6 +17,7 @@ import {
   listAnalyticsReports,
 } from "./analytics.tools.js";
 import { apiToolsModule } from "./api.tools.js";
+import { appInfoAdminToolsModule } from "./app-info-admin.tools.js";
 import {
   appInfoToolDefinitions,
   listAppInfoLocalizations,
@@ -47,7 +48,9 @@ import {
   getAppPriceSchedule,
   listAppCategories,
 } from "./categories.tools.js";
+import { customerReviewsToolsModule } from "./customer-reviews.tools.js";
 import { devicesToolDefinitions, getDevice, listDevices } from "./devices.tools.js";
+import { iapOfferCodesToolsModule } from "./iap-offer-codes.tools.js";
 import {
   createInAppPurchase,
   createInAppPurchaseLocalization,
@@ -75,6 +78,7 @@ import {
   localizationsToolDefinitions,
   updateVersionLocalization,
 } from "./localizations.tools.js";
+import { mediaToolsModule } from "./media.tools.js";
 import {
   getAppPerfMetrics,
   getBuildPerfMetrics,
@@ -89,6 +93,9 @@ import {
   pricingToolDefinitions,
   setAppPrices,
 } from "./pricing.tools.js";
+import { productPagesToolsModule } from "./product-pages.tools.js";
+import { releaseToolsModule } from "./release.tools.js";
+import { reviewSubmissionsToolsModule } from "./review-submissions.tools.js";
 import {
   getFinanceReport,
   getSalesReport,
@@ -100,6 +107,8 @@ import {
   screenshotsToolDefinitions,
   uploadScreenshot,
 } from "./screenshots.tools.js";
+import { subscriptionOfferCodesToolsModule } from "./subscription-offer-codes.tools.js";
+import { subscriptionOffersToolsModule } from "./subscription-offers.tools.js";
 import {
   createPromotionalOffer,
   createSubscription,
@@ -130,6 +139,8 @@ import {
   updateSubscriptionGroupLocalization,
   updateSubscriptionLocalization,
 } from "./subscriptions.tools.js";
+import { testflightBuildsToolsModule } from "./testflight-builds.tools.js";
+import { testflightGroupsToolsModule } from "./testflight-groups.tools.js";
 import type { ToolDefinition, ToolHandler, ToolModule } from "./types.js";
 import { getUser, listUsers, usersToolDefinitions } from "./users.tools.js";
 import { versionAdminToolsModule } from "./version-admin.tools.js";
@@ -330,6 +341,17 @@ export const allToolModules: readonly ToolModule[] = [
     },
   },
   versionAdminToolsModule,
+  releaseToolsModule,
+  reviewSubmissionsToolsModule,
+  appInfoAdminToolsModule,
+  mediaToolsModule,
+  testflightGroupsToolsModule,
+  testflightBuildsToolsModule,
+  customerReviewsToolsModule,
+  subscriptionOffersToolsModule,
+  subscriptionOfferCodesToolsModule,
+  iapOfferCodesToolsModule,
+  productPagesToolsModule,
   apiToolsModule,
 ];
 

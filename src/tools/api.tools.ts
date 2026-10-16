@@ -37,8 +37,8 @@ const PAGINATION_RESERVE_CHARS = 2_000;
 const FILE_RESPONSE_TOOLS: Record<string, string> = {
   "/v1/salesReports": "get_sales_report",
   "/v1/financeReports": "get_finance_report",
-  "/v1/subscriptionOfferCodeOneTimeUseCodes/{id}/values": "get_one_time_code_values",
-  "/v1/inAppPurchaseOfferCodeOneTimeUseCodes/{id}/values": "get_one_time_code_values",
+  "/v1/subscriptionOfferCodeOneTimeUseCodes/{id}/values": "get_subscription_one_time_code_values",
+  "/v1/inAppPurchaseOfferCodeOneTimeUseCodes/{id}/values": "get_iap_one_time_code_values",
 };
 
 const METHODS = ["GET", "POST", "PATCH", "DELETE"] as const;
