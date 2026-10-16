@@ -258,6 +258,22 @@ describe("asc_api_request", () => {
       expect(result.pagination).toMatchObject({ truncated: true, stopReason: "repeatedNextLink" });
     });
 
+    it("flags a first page larger than maxItems when the operation has no limit parameter", async () => {
+      client.get.mockReset();
+      client.get.mockResolvedValueOnce({
+        data: [
+          { type: "appAssetLibraryRefData", id: "r1" },
+          { type: "appAssetLibraryRefData", id: "r2" },
+        ],
+      });
+      const result = await call(client, {
+        path: "/v1/appAssetLibraryRefData",
+        paginate: true,
+        maxItems: 1,
+      });
+      expect(result.pagination).toMatchObject({ returned: 2, maxItemsExceeded: true });
+    });
+
     it("clamps an explicit page limit so the first page cannot exceed maxItems", async () => {
       await call(client, { path: "/v1/apps", paginate: true, maxItems: 3, query: { limit: 50 } });
       expect(client.get.mock.calls[0]?.[1]).toMatchObject({ limit: "3" });

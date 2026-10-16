@@ -37,12 +37,18 @@ export function sanitizeMessage(message: string, extra: readonly string[] = []):
   return sanitized;
 }
 
+// Server-owned identifiers in Apple error details; never rewritten by redaction
+const STABLE_DETAIL_KEYS = new Set(["code", "status", "id"]);
+
 function sanitizeValue(value: unknown, extra: readonly string[]): unknown {
   if (typeof value === "string") return sanitizeMessage(value, extra);
   if (Array.isArray(value)) return value.map((item) => sanitizeValue(item, extra));
   if (value && typeof value === "object") {
     return Object.fromEntries(
-      Object.entries(value).map(([key, item]) => [key, sanitizeValue(item, extra)])
+      Object.entries(value).map(([key, item]) => [
+        key,
+        STABLE_DETAIL_KEYS.has(key) && typeof item === "string" ? item : sanitizeValue(item, extra),
+      ])
     );
   }
   return value;
@@ -230,7 +236,16 @@ export function formatErrorResponse(
       success: false;
       error: { code: string; message: string; details?: unknown };
     };
-    return redact.length ? (sanitizeValue(json, redact) as typeof json) : json;
+    if (!redact.length) return json;
+    // Redact free text only; error codes stay machine-readable even for one-letter secrets
+    return {
+      ...json,
+      error: {
+        ...json.error,
+        message: sanitizeMessage(json.error.message, redact),
+        details: sanitizeValue(json.error.details, redact),
+      },
+    };
   }
 
   if (error instanceof Error) {

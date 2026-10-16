@@ -468,6 +468,9 @@ async function paginate(
     pagination: {
       pages,
       returned: (response.data as unknown[]).length,
+      // A first page larger than maxItems (operation without a limit parameter) is returned
+      // whole rather than split, since a split page could not be resumed without losing records
+      ...((response.data as unknown[]).length > maxItems ? { maxItemsExceeded: true } : {}),
       truncated: Boolean(stopReason),
       ...(cursor ? { cursor } : {}),
       ...(stopReason ? { stopReason } : {}),

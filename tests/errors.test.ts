@@ -53,6 +53,16 @@ describe("error sanitization", () => {
     expect(JSON.stringify(formatErrorResponse(error, ["xy"]))).not.toContain("xy");
   });
 
+  it("keeps the error code intact when a one-letter secret is redacted", () => {
+    const error = parseAPIError(500, {
+      errors: [{ code: "ENTITY_ERROR.ATTRIBUTE.INVALID", detail: "password A rejected" }],
+    });
+    const response = formatErrorResponse(error, ["A"]);
+    expect(response.error.code).toBe("API_ERROR");
+    expect(response.error.details).toMatchObject([{ code: "ENTITY_ERROR.ATTRIBUTE.INVALID" }]);
+    expect(response.error.message).not.toContain(" A ");
+  });
+
   it("redacts bearer tokens from plain errors", () => {
     const response = formatErrorResponse(new Error("sent Bearer aaa.bbb.ccc"));
     expect(response.error.message).not.toContain("aaa.bbb.ccc");
