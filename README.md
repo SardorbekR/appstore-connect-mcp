@@ -46,31 +46,35 @@ A Model Context Protocol (MCP) server for Apple's App Store Connect API. Manage 
 
 ## Quick Start
 
-```bash
-# 1. Install
-npm install -g asc-mcp
-
-# 2. Set credentials (get from App Store Connect > Users and Access > Keys)
-export APP_STORE_CONNECT_KEY_ID="YOUR_KEY_ID"
-export APP_STORE_CONNECT_ISSUER_ID="YOUR_ISSUER_ID"
-export APP_STORE_CONNECT_P8_PATH="/path/to/AuthKey.p8"
-
-# 3. Add to your MCP client config and start using!
-```
+1. Get an App Store Connect API key (see [Prerequisites](#prerequisites-get-your-apple-api-credentials)).
+2. Add the server to your MCP client with `npx -y asc-mcp@latest` and your credentials (see [MCP Client Configuration](#mcp-client-configuration)).
+3. Restart the client. New releases are picked up on each restart.
 
 ## Installation
 
-### npm (recommended)
+### npx (recommended)
+
+```bash
+npx -y asc-mcp@latest
+```
+
+Your MCP client runs this command itself (see [MCP Client Configuration](#mcp-client-configuration)). npx fetches the newest release whenever the client starts, so you stay up to date.
+
+### Global install
 
 ```bash
 npm install -g asc-mcp
 ```
 
-### Using npx
+Then use `"command": "asc-mcp"` in your client config. A global install does not update by itself: run `npm install -g asc-mcp@latest` to update.
 
-```bash
-npx asc-mcp
-```
+### Updating
+
+- **npx:** restart your MCP client. A running client keeps the version it started with.
+- **Global install:** `npm install -g asc-mcp@latest`, then restart the client.
+- **Pin a version** for stability with `asc-mcp@2.0.2` (or any version) instead of `asc-mcp@latest`.
+
+Once a day the server asks npm for the latest version in the background, without delaying startup. If yours is older, the next time the server starts it tells your assistant, which mentions it to you once. It sends nothing but that request, and installs nothing. Set `ASC_DISABLE_UPDATE_CHECK=1` to turn it off.
 
 ### From Source
 
@@ -111,6 +115,7 @@ Optional settings:
 | `ASC_TOOLSETS` | all | Comma-separated tool groups to expose: `apps`, `versions`, `media`, `testflight`, `pricing`, `subscriptions`, `iap`, `reviews`, `product-pages`, `provisioning`, `users`, `analytics`, `api`. Fewer tools means less context in clients with small tool budgets. The `api` group reaches every operation, including ones outside the other groups. |
 | `ASC_READ_ONLY` | off | `1` exposes only read tools and makes the client refuse every non-GET request |
 | `ASC_MAX_RESPONSE_CHARS` | 80000 | Size cap for `asc_api_request` results; larger results end at a page boundary with a `cursor` to continue |
+| `ASC_DISABLE_UPDATE_CHECK` | off | `1` skips the once-a-day check for a newer asc-mcp release |
 
 ### MCP Client Configuration
 
@@ -126,7 +131,8 @@ Add to your Claude Desktop config file:
 {
   "mcpServers": {
     "app-store-connect": {
-      "command": "asc-mcp",
+      "command": "npx",
+      "args": ["-y", "asc-mcp@latest"],
       "env": {
         "APP_STORE_CONNECT_KEY_ID": "YOUR_KEY_ID",
         "APP_STORE_CONNECT_ISSUER_ID": "YOUR_ISSUER_ID",
@@ -149,7 +155,7 @@ Add to your Cursor MCP settings (Settings → MCP Servers):
   "mcpServers": {
     "app-store-connect": {
       "command": "npx",
-      "args": ["-y", "asc-mcp"],
+      "args": ["-y", "asc-mcp@latest"],
       "env": {
         "APP_STORE_CONNECT_KEY_ID": "YOUR_KEY_ID",
         "APP_STORE_CONNECT_ISSUER_ID": "YOUR_ISSUER_ID",
@@ -171,7 +177,8 @@ Add to your Continue configuration:
 {
   "mcpServers": {
     "app-store-connect": {
-      "command": "asc-mcp",
+      "command": "npx",
+      "args": ["-y", "asc-mcp@latest"],
       "env": {
         "APP_STORE_CONNECT_KEY_ID": "YOUR_KEY_ID",
         "APP_STORE_CONNECT_ISSUER_ID": "YOUR_ISSUER_ID",
@@ -193,7 +200,8 @@ For CI/CD or containerized environments, you can pass the key content directly:
 {
   "mcpServers": {
     "app-store-connect": {
-      "command": "asc-mcp",
+      "command": "npx",
+      "args": ["-y", "asc-mcp@latest"],
       "env": {
         "APP_STORE_CONNECT_KEY_ID": "YOUR_KEY_ID",
         "APP_STORE_CONNECT_ISSUER_ID": "YOUR_ISSUER_ID",

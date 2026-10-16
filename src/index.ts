@@ -12,11 +12,12 @@ import { type AppStoreConnectClient, createClient } from "./api/client.js";
 import { type TokenManager, createTokenManagerFromEnv } from "./auth/jwt.js";
 import { type ServerConfig, TOOLSETS, loadServerConfig } from "./config.js";
 import { type ToolRegistry, createToolRegistry } from "./tools/index.js";
+import { cachedNewerVersion, refreshLatestVersion, updateNotice } from "./update-check.js";
 import { ConfigError, formatErrorResponse } from "./utils/errors.js";
 
 // Server metadata
 const SERVER_NAME = "asc-mcp";
-const SERVER_VERSION = "2.0.1";
+const SERVER_VERSION = "2.0.2";
 
 /**
  * Initialize and run the MCP server
@@ -44,10 +45,20 @@ async function main(): Promise<void> {
       console.error("\nOptional:");
       console.error(`  ASC_TOOLSETS - Comma-separated subset of: ${TOOLSETS.join(", ")}`);
       console.error("  ASC_READ_ONLY - Set to 1 to expose only read tools and block writes");
+      console.error(
+        "  ASC_DISABLE_UPDATE_CHECK - Set to 1 to skip the daily check for a newer version"
+      );
       process.exit(1);
     }
     throw error;
   }
+
+  // Tell the assistant (via server instructions) when the last background check found a newer
+  // release, and refresh that check for the next start without delaying this one
+  const latestVersion = await cachedNewerVersion(SERVER_VERSION);
+  const instructions = latestVersion ? updateNotice(SERVER_VERSION, latestVersion) : undefined;
+  if (instructions) console.error(instructions);
+  void refreshLatestVersion();
 
   // Create MCP server
   const server = new Server(
@@ -59,6 +70,7 @@ async function main(): Promise<void> {
       capabilities: {
         tools: {},
       },
+      ...(instructions ? { instructions } : {}),
     }
   );
 
