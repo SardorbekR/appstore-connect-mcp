@@ -293,6 +293,37 @@ describe("subscription offer code tools", () => {
       });
       expectContract(client);
     });
+
+    it("refuses to inline a large batch and writes it to savePath instead", async () => {
+      const { mkdtemp, readFile, stat } = await import("node:fs/promises");
+      const { tmpdir } = await import("node:os");
+      const { join } = await import("node:path");
+      const csv = `code\n${Array.from({ length: 5000 }, (_, i) => `CODE-${i}-ABCDEFGH`).join("\n")}\n`;
+
+      client.requestRaw.mockResolvedValueOnce(new Response(csv));
+      const inline = await getSubscriptionOneTimeCodeValues(asClient(client), {
+        oneTimeUseCodeBatchId: "b1",
+      });
+      expect(inline).toMatchObject({ success: false, error: { code: "TOO_LARGE" } });
+
+      const savePath = join(await mkdtemp(join(tmpdir(), "asc-codes-")), "codes.csv");
+      client.requestRaw.mockResolvedValueOnce(new Response(csv));
+      const saved = await getSubscriptionOneTimeCodeValues(asClient(client), {
+        oneTimeUseCodeBatchId: "b1",
+        savePath,
+      });
+      expect(saved).toMatchObject({ success: true, data: { savedTo: savePath, lineCount: 5001 } });
+      expect(JSON.stringify(saved)).not.toContain("CODE-1-");
+      expect(await readFile(savePath, "utf8")).toBe(csv);
+      expect((await stat(savePath)).mode & 0o777).toBe(0o600);
+
+      client.requestRaw.mockResolvedValueOnce(new Response(csv));
+      const again = await getSubscriptionOneTimeCodeValues(asClient(client), {
+        oneTimeUseCodeBatchId: "b1",
+        savePath,
+      });
+      expect(again).toMatchObject({ success: false, error: { code: "FILE_EXISTS" } });
+    });
   });
 
   describe("create_subscription_custom_code", () => {

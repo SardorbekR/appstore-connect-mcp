@@ -181,6 +181,18 @@ describe("app info admin tools", () => {
       expectContract(client);
     });
 
+    it("clears kidsAgeBand with null", async () => {
+      client.patch.mockResolvedValueOnce({ data: ageRating });
+
+      await updateAgeRatingDeclaration(asClient(client), {
+        declarationId: "ard1",
+        attributes: { kidsAgeBand: null },
+      });
+
+      expect(client.patch.mock.calls[0]?.[1].data.attributes).toEqual({ kidsAgeBand: null });
+      expectContract(client);
+    });
+
     it("refuses socialMedia=true together with userGeneratedContent=false", async () => {
       const result = await updateAgeRatingDeclaration(asClient(client), {
         declarationId: "ard1",

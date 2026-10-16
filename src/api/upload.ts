@@ -5,6 +5,8 @@
  * 1. Reserve: POST the asset with fileName/fileSize and its parent relationship
  * 2. Upload: PUT each file chunk to the URLs in `uploadOperations`
  * 3. Commit: PATCH `uploaded: true` with the file's MD5 `sourceFileChecksum` (hex)
+ *    If an upload or the commit fails, the reserved asset is deleted so no empty placeholder
+ *    is left in its set
  * 4. Optionally poll until the delivery state is COMPLETE or FAILED
  *    (`videoDeliveryState` for app previews, `assetDeliveryState` for images)
  */
@@ -59,6 +61,7 @@ export interface UploadAssetOptions {
 }
 
 export const DEFAULT_POLL_INTERVAL_MS = 2_000;
+export const DEFAULT_POLL_TIMEOUT_MS = 10 * 60_000;
 
 /**
  * Processing state of an uploaded asset. App previews report `videoDeliveryState`;
@@ -67,7 +70,6 @@ export const DEFAULT_POLL_INTERVAL_MS = 2_000;
 export function deliveryStateOf(asset: UploadedAsset): AssetDeliveryState | null | undefined {
   return asset.attributes.videoDeliveryState ?? asset.attributes.assetDeliveryState;
 }
-export const DEFAULT_POLL_TIMEOUT_MS = 10 * 60_000;
 
 /**
  * MD5 of the file as lowercase hex, the format App Store Connect returns in sourceFileChecksum.
@@ -116,6 +118,25 @@ async function uploadChunks(
         "UPLOAD_ERROR",
         response.status
       );
+    }
+  }
+}
+
+/**
+ * Best-effort removal of an asset whose upload failed, so it does not occupy a slot in its set.
+ * The original error is rethrown by the caller; a failed cleanup is noted on that error.
+ */
+async function discardReservedAsset(
+  client: AppStoreConnectClient,
+  resourcePath: string,
+  assetId: string,
+  error: unknown
+): Promise<void> {
+  try {
+    await client.delete(resourcePath);
+  } catch {
+    if (error instanceof Error) {
+      error.message += ` (the reserved asset ${assetId} could not be deleted; remove it manually)`;
     }
   }
 }
@@ -197,19 +218,24 @@ export async function uploadAsset(
     throw new ASCError("No upload operations provided", "UPLOAD_ERROR", 500);
   }
 
-  await uploadChunks(client, operations, buffer);
-
   const resourcePath = `${options.collectionPath}/${asset.id}`;
-  const committed = await client.patch<ASCResponse<UploadedAsset>>(resourcePath, {
-    data: {
-      type: options.resourceType,
-      id: asset.id,
-      attributes: {
-        sourceFileChecksum: md5Hex(buffer),
-        uploaded: true,
+  let committed: ASCResponse<UploadedAsset>;
+  try {
+    await uploadChunks(client, operations, buffer);
+    committed = await client.patch<ASCResponse<UploadedAsset>>(resourcePath, {
+      data: {
+        type: options.resourceType,
+        id: asset.id,
+        attributes: {
+          sourceFileChecksum: md5Hex(buffer),
+          uploaded: true,
+        },
       },
-    },
-  });
+    });
+  } catch (error) {
+    await discardReservedAsset(client, resourcePath, asset.id, error);
+    throw error;
+  }
 
   if (!options.waitForProcessing) return committed.data;
   return waitForAssetProcessing(client, resourcePath, {

@@ -317,7 +317,10 @@ export async function addReviewSubmissionItem(
     if (error instanceof ASCError && error.status === 409) {
       const conflictingSubmissionId = conflictingSubmissionIdOf(error);
       if (conflictingSubmissionId) {
-        return refusal("CONFLICT", error.message, { conflictingSubmissionId });
+        return refusal("CONFLICT", error.message, {
+          conflictingSubmissionId,
+          details: error.details,
+        });
       }
     }
     return formatErrorResponse(error);

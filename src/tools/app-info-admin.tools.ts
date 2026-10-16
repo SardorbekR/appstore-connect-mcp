@@ -147,7 +147,7 @@ const ageRatingAttributesSchema = z
     gamblingSimulated: intensitySchema.optional(),
     gunsOrOtherWeapons: intensitySchema.optional(),
     healthOrWellnessTopics: z.boolean().optional(),
-    kidsAgeBand: z.enum(KIDS_AGE_BANDS).optional(),
+    kidsAgeBand: z.enum(KIDS_AGE_BANDS).nullable().optional(),
     lootBox: z.boolean().optional(),
     medicalOrTreatmentInformation: intensitySchema.optional(),
     messagingAndChat: z.boolean().optional(),
@@ -165,11 +165,11 @@ const ageRatingAttributesSchema = z
     violenceCartoonOrFantasy: intensitySchema.optional(),
     violenceRealisticProlongedGraphicOrSadistic: intensitySchema.optional(),
     violenceRealistic: intensitySchema.optional(),
-    ageRatingOverride: z.enum(AGE_RATING_OVERRIDE).optional(),
-    ageRatingOverrideV2: z.enum(AGE_RATING_OVERRIDE_V2).optional(),
-    koreaAgeRatingOverride: z.enum(KOREA_AGE_RATING_OVERRIDE).optional(),
-    gracRatingClassificationNumber: z.string().optional(),
-    developerAgeRatingInfoUrl: z.string().url().optional(),
+    ageRatingOverride: z.enum(AGE_RATING_OVERRIDE).nullable().optional(),
+    ageRatingOverrideV2: z.enum(AGE_RATING_OVERRIDE_V2).nullable().optional(),
+    koreaAgeRatingOverride: z.enum(KOREA_AGE_RATING_OVERRIDE).nullable().optional(),
+    gracRatingClassificationNumber: z.string().nullable().optional(),
+    developerAgeRatingInfoUrl: z.string().url().nullable().optional(),
   })
   .strict();
 
@@ -570,6 +570,12 @@ const categoryProperties = {
 
 const intensityJsonSchema = { type: "string", enum: INTENSITY };
 
+/** A string attribute that may also be null, which clears it. */
+const clearableJsonSchema = (values?: readonly string[]) => ({
+  type: ["string", "null"],
+  ...(values ? { enum: [...values, null] } : {}),
+});
+
 /** JSON Schema mirror of ageRatingAttributesSchema (same names, same enums). */
 const ageRatingAttributeProperties = {
   advertising: { type: "boolean" },
@@ -579,7 +585,7 @@ const ageRatingAttributeProperties = {
   gamblingSimulated: intensityJsonSchema,
   gunsOrOtherWeapons: intensityJsonSchema,
   healthOrWellnessTopics: { type: "boolean" },
-  kidsAgeBand: { type: "string", enum: KIDS_AGE_BANDS },
+  kidsAgeBand: clearableJsonSchema(KIDS_AGE_BANDS),
   lootBox: { type: "boolean" },
   medicalOrTreatmentInformation: intensityJsonSchema,
   messagingAndChat: { type: "boolean" },
@@ -597,11 +603,11 @@ const ageRatingAttributeProperties = {
   violenceCartoonOrFantasy: intensityJsonSchema,
   violenceRealisticProlongedGraphicOrSadistic: intensityJsonSchema,
   violenceRealistic: intensityJsonSchema,
-  ageRatingOverride: { type: "string", enum: AGE_RATING_OVERRIDE },
-  ageRatingOverrideV2: { type: "string", enum: AGE_RATING_OVERRIDE_V2 },
-  koreaAgeRatingOverride: { type: "string", enum: KOREA_AGE_RATING_OVERRIDE },
-  gracRatingClassificationNumber: { type: "string" },
-  developerAgeRatingInfoUrl: { type: "string", format: "uri" },
+  ageRatingOverride: clearableJsonSchema(AGE_RATING_OVERRIDE),
+  ageRatingOverrideV2: clearableJsonSchema(AGE_RATING_OVERRIDE_V2),
+  koreaAgeRatingOverride: clearableJsonSchema(KOREA_AGE_RATING_OVERRIDE),
+  gracRatingClassificationNumber: clearableJsonSchema(),
+  developerAgeRatingInfoUrl: { ...clearableJsonSchema(), format: "uri" },
 };
 
 export const appInfoAdminToolDefinitions = [
@@ -669,7 +675,8 @@ export const appInfoAdminToolDefinitions = [
         declarationId: { type: "string", description: "The age rating declaration ID" },
         attributes: {
           type: "object",
-          description: "Age rating answers to change; keys not listed are rejected",
+          description:
+            "Age rating answers to change; keys not listed are rejected. null clears kidsAgeBand, the overrides, gracRatingClassificationNumber, and developerAgeRatingInfoUrl.",
           properties: ageRatingAttributeProperties,
           additionalProperties: false,
         },
