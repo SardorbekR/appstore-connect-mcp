@@ -683,17 +683,17 @@ describe("In-App Purchase Tools", () => {
   // ==========================================================================
 
   describe("getInAppPurchaseAvailability", () => {
-    it("should GET the corrected inAppPurchaseAvailability sub-resource path", async () => {
+    it("pages through every territory of the inAppPurchaseAvailability sub-resource", async () => {
       mockClient.get.mockResolvedValueOnce({
         data: {
           id: "avail1",
           type: "inAppPurchaseAvailabilities",
           attributes: { availableInNewTerritories: true },
         },
-        included: [
-          { id: "USA", type: "territories", attributes: { currency: "USD" } },
-          { id: "GBR", type: "territories", attributes: { currency: "GBP" } },
-        ],
+      });
+      mockClient.paginate.mockImplementationOnce(async function* () {
+        yield { id: "USA", type: "territories", attributes: { currency: "USD" } };
+        yield { id: "GBR", type: "territories", attributes: { currency: "GBP" } };
       });
 
       const result = await getInAppPurchaseAvailability(asClient(mockClient), {
@@ -701,8 +701,11 @@ describe("In-App Purchase Tools", () => {
       });
 
       expect(mockClient.get).toHaveBeenCalledWith(
-        "/v2/inAppPurchases/iap1/inAppPurchaseAvailability",
-        { include: "availableTerritories", "fields[territories]": "currency" }
+        "/v2/inAppPurchases/iap1/inAppPurchaseAvailability"
+      );
+      expect(mockClient.paginate).toHaveBeenCalledWith(
+        "/inAppPurchaseAvailabilities/avail1/availableTerritories",
+        { limit: 200, "fields[territories]": "currency" }
       );
       expect(result).toEqual({
         success: true,
@@ -761,11 +764,18 @@ describe("In-App Purchase Tools", () => {
           inAppPurchaseId: "iap1",
           availableInNewTerritories: false,
           territoriesCount: 2,
+          keptCurrentTerritories: false,
         },
       });
     });
 
-    it("should omit availableTerritories when none provided", async () => {
+    it("keeps the current territories when none are provided", async () => {
+      mockClient.get.mockResolvedValueOnce({
+        data: { id: "avail0", type: "inAppPurchaseAvailabilities", attributes: {} },
+      });
+      mockClient.paginate.mockImplementationOnce(async function* () {
+        yield { id: "DEU", type: "territories", attributes: { currency: "EUR" } };
+      });
       mockClient.post.mockResolvedValueOnce({
         data: {
           id: "avail1",
@@ -774,15 +784,18 @@ describe("In-App Purchase Tools", () => {
         },
       });
 
-      await setInAppPurchaseAvailability(asClient(mockClient), {
+      const result = await setInAppPurchaseAvailability(asClient(mockClient), {
         inAppPurchaseId: "iap1",
         availableInNewTerritories: true,
       });
 
-      const body = mockClient.post.mock.calls[0][1] as {
+      const body = mockClient.post.mock.calls[0]?.[1] as {
         data: { relationships: Record<string, unknown> };
       };
-      expect(body.data.relationships).not.toHaveProperty("availableTerritories");
+      expect(body.data.relationships.availableTerritories).toEqual({
+        data: [{ type: "territories", id: "DEU" }],
+      });
+      expect(result).toMatchObject({ data: { keptCurrentTerritories: true, territoriesCount: 1 } });
     });
 
     it("should require availableInNewTerritories", async () => {

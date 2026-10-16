@@ -33,6 +33,7 @@ import {
   updateSubscriptionGroupLocalization,
   updateSubscriptionLocalization,
 } from "../src/tools/subscriptions.tools.js";
+import { expectContract } from "./helpers/contract.js";
 
 const createMockClient = () => ({
   get: vi.fn(),
@@ -1269,17 +1270,22 @@ describe("Subscription Tools", () => {
   // ============================================================================
 
   describe("getSubscriptionAvailability", () => {
-    it("should return availability with territory list", async () => {
+    it("pages through every territory instead of the first page an include returns", async () => {
       mockClient.get.mockResolvedValueOnce({
         data: {
           id: "avail1",
           type: "subscriptionAvailabilities",
           attributes: { availableInNewTerritories: true },
         },
-        included: [
-          { id: "USA", type: "territories", attributes: { currency: "USD" } },
-          { id: "GBR", type: "territories", attributes: { currency: "GBP" } },
-        ],
+      });
+      // 175 territories, more than any single include returns
+      const territories = Array.from({ length: 175 }, (_, index) => ({
+        id: `T${String(index).padStart(2, "0")}`,
+        type: "territories",
+        attributes: { currency: "USD" },
+      }));
+      mockClient.paginate.mockImplementationOnce(async function* () {
+        yield* territories;
       });
 
       const result = await getSubscriptionAvailability(
@@ -1287,44 +1293,18 @@ describe("Subscription Tools", () => {
         { subscriptionId: "sub1" }
       );
 
-      expect(mockClient.get).toHaveBeenCalledWith(
-        "/subscriptions/sub1/subscriptionAvailability",
-        expect.objectContaining({ include: "availableTerritories" })
+      expect(mockClient.get).toHaveBeenCalledWith("/subscriptions/sub1/subscriptionAvailability");
+      expect(mockClient.paginate).toHaveBeenCalledWith(
+        "/subscriptionAvailabilities/avail1/availableTerritories",
+        { limit: 200, "fields[territories]": "currency" }
       );
-
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         success: true,
-        data: {
-          id: "avail1",
-          subscriptionId: "sub1",
-          availableInNewTerritories: true,
-          availableTerritories: [
-            { id: "USA", currency: "USD" },
-            { id: "GBR", currency: "GBP" },
-          ],
-        },
+        data: { id: "avail1", subscriptionId: "sub1", availableInNewTerritories: true },
       });
-    });
-
-    it("should return empty territories when none included", async () => {
-      mockClient.get.mockResolvedValueOnce({
-        data: {
-          id: "avail2",
-          type: "subscriptionAvailabilities",
-          attributes: { availableInNewTerritories: false },
-        },
-        included: [],
-      });
-
-      const result = await getSubscriptionAvailability(
-        mockClient as unknown as AppStoreConnectClient,
-        { subscriptionId: "sub1" }
-      );
-
-      expect(result).toEqual({
-        success: true,
-        data: expect.objectContaining({ availableTerritories: [] }),
-      });
+      expect(
+        (result as { data: { availableTerritories: unknown[] } }).data.availableTerritories
+      ).toHaveLength(175);
     });
 
     it("should require subscriptionId", async () => {
@@ -1379,7 +1359,7 @@ describe("Subscription Tools", () => {
           },
         },
       });
-
+      expect(mockClient.get).not.toHaveBeenCalled();
       expect(result).toEqual({
         success: true,
         data: {
@@ -1387,14 +1367,22 @@ describe("Subscription Tools", () => {
           subscriptionId: "sub1",
           availableInNewTerritories: false,
           territoriesCount: 3,
+          keptCurrentTerritories: false,
         },
       });
     });
 
-    it("should set availability without territories list", async () => {
+    it("keeps the current territories when only availableInNewTerritories changes", async () => {
+      mockClient.get.mockResolvedValueOnce({
+        data: { id: "avail2", type: "subscriptionAvailabilities", attributes: {} },
+      });
+      mockClient.paginate.mockImplementationOnce(async function* () {
+        yield { id: "USA", type: "territories", attributes: { currency: "USD" } };
+        yield { id: "JPN", type: "territories", attributes: { currency: "JPY" } };
+      });
       mockClient.post.mockResolvedValueOnce({
         data: {
-          id: "avail2",
+          id: "avail3",
           type: "subscriptionAvailabilities",
           attributes: { availableInNewTerritories: true },
         },
@@ -1411,19 +1399,32 @@ describe("Subscription Tools", () => {
           attributes: { availableInNewTerritories: true },
           relationships: {
             subscription: { data: { type: "subscriptions", id: "sub1" } },
+            availableTerritories: {
+              data: [
+                { type: "territories", id: "USA" },
+                { type: "territories", id: "JPN" },
+              ],
+            },
           },
         },
       });
-
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         success: true,
-        data: {
-          id: "avail2",
-          subscriptionId: "sub1",
-          availableInNewTerritories: true,
-          territoriesCount: 0,
-        },
+        data: { territoriesCount: 2, keptCurrentTerritories: true },
       });
+    });
+
+    it("refuses to guess territories for a subscription with no availability yet", async () => {
+      const { ASCError } = await import("../src/utils/errors.js");
+      mockClient.get.mockRejectedValueOnce(new ASCError("Not found", "NOT_FOUND", 404));
+
+      const result = await setSubscriptionAvailability(
+        mockClient as unknown as AppStoreConnectClient,
+        { subscriptionId: "sub1", availableInNewTerritories: true }
+      );
+
+      expect(result).toMatchObject({ success: false, error: { code: "VALIDATION_ERROR" } });
+      expect(mockClient.post).not.toHaveBeenCalled();
     });
 
     it("should require subscriptionId and availableInNewTerritories", async () => {
@@ -1600,7 +1601,7 @@ describe("Subscription Tools", () => {
   // ============================================================================
 
   describe("createPromotionalOffer", () => {
-    it("should create a FREE_TRIAL offer with empty prices", async () => {
+    it("creates a FREE_TRIAL offer with numberOfPeriods and territory-only prices", async () => {
       mockClient.post.mockResolvedValueOnce({
         data: {
           id: "po1",
@@ -1610,7 +1611,7 @@ describe("Subscription Tools", () => {
             offerCode: "FREETRIAL",
             duration: "ONE_MONTH",
             offerMode: "FREE_TRIAL",
-            numberOfPeriods: undefined,
+            numberOfPeriods: 1,
           },
         },
       });
@@ -1621,6 +1622,8 @@ describe("Subscription Tools", () => {
         offerCode: "FREETRIAL",
         duration: "ONE_MONTH",
         offerMode: "FREE_TRIAL",
+        periodCount: 1,
+        prices: [{ territory: "USA" }],
       });
 
       expect(mockClient.post).toHaveBeenCalledWith("/subscriptionPromotionalOffers", {
@@ -1631,26 +1634,51 @@ describe("Subscription Tools", () => {
             offerCode: "FREETRIAL",
             duration: "ONE_MONTH",
             offerMode: "FREE_TRIAL",
-            numberOfPeriods: undefined,
+            numberOfPeriods: 1,
           },
           relationships: {
             subscription: { data: { type: "subscriptions", id: "sub1" } },
-            prices: { data: [] },
+            prices: { data: [{ type: "subscriptionPromotionalOfferPrices", id: "${USA-promo}" }] },
           },
         },
+        included: [
+          {
+            type: "subscriptionPromotionalOfferPrices",
+            id: "${USA-promo}",
+            relationships: { territory: { data: { type: "territories", id: "USA" } } },
+          },
+        ],
+      });
+      expect(result).toMatchObject({ success: true, data: { id: "po1", periodCount: 1 } });
+      expectContract(mockClient);
+    });
+
+    it("requires periodCount for every mode, free trials included", async () => {
+      const result = await createPromotionalOffer(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionId: "sub1",
+        name: "Trial",
+        offerCode: "FREETRIAL",
+        duration: "ONE_MONTH",
+        offerMode: "FREE_TRIAL",
       });
 
-      expect(result).toEqual({
-        success: true,
-        data: {
-          id: "po1",
-          name: "Trial",
-          offerCode: "FREETRIAL",
-          duration: "ONE_MONTH",
-          offerMode: "FREE_TRIAL",
-          periodCount: undefined,
-        },
+      expect(result).toMatchObject({ success: false, error: { code: "VALIDATION_ERROR" } });
+      expect(mockClient.post).not.toHaveBeenCalled();
+    });
+
+    it("refuses a price point on a FREE_TRIAL offer", async () => {
+      const result = await createPromotionalOffer(mockClient as unknown as AppStoreConnectClient, {
+        subscriptionId: "sub1",
+        name: "Trial",
+        offerCode: "FREETRIAL",
+        duration: "ONE_MONTH",
+        offerMode: "FREE_TRIAL",
+        periodCount: 1,
+        prices: [{ territory: "USA", pricePointId: "pp1" }],
       });
+
+      expect(result).toMatchObject({ success: false, error: { code: "VALIDATION_ERROR" } });
+      expect(mockClient.post).not.toHaveBeenCalled();
     });
 
     it("should create a PAY_AS_YOU_GO offer with price includes", async () => {
@@ -1697,7 +1725,6 @@ describe("Subscription Tools", () => {
           {
             type: "subscriptionPromotionalOfferPrices",
             id: "${USA-promo}",
-            attributes: {},
             relationships: {
               subscriptionPricePoint: { data: { type: "subscriptionPricePoints", id: "pp1" } },
               territory: { data: { type: "territories", id: "USA" } },
@@ -1705,6 +1732,7 @@ describe("Subscription Tools", () => {
           },
         ],
       });
+      expectContract(mockClient);
     });
 
     it("should require subscriptionId, name, offerCode, duration, and offerMode", async () => {
@@ -1795,50 +1823,21 @@ describe("Subscription Tools", () => {
   // ============================================================================
 
   describe("updatePromotionalOffer", () => {
-    it("should update offer attributes", async () => {
-      mockClient.patch.mockResolvedValueOnce({
-        data: {
-          id: "po1",
-          type: "subscriptionPromotionalOffers",
-          attributes: {
-            name: "New Name",
-            offerCode: "NEW",
-            duration: "ONE_WEEK",
-            offerMode: "FREE_TRIAL",
-            numberOfPeriods: undefined,
-          },
-        },
-      });
-
+    it("refuses attribute changes, which Apple does not allow on an existing offer", async () => {
       const result = await updatePromotionalOffer(mockClient as unknown as AppStoreConnectClient, {
         promotionalOfferId: "po1",
         name: "New Name",
-        offerCode: "NEW",
-        duration: "ONE_WEEK",
+        prices: [{ territory: "USA", pricePointId: "pp1" }],
       });
 
-      expect(mockClient.patch).toHaveBeenCalledWith(
-        "/subscriptionPromotionalOffers/po1",
-        expect.objectContaining({
-          data: expect.objectContaining({
-            type: "subscriptionPromotionalOffers",
-            id: "po1",
-            attributes: expect.objectContaining({
-              name: "New Name",
-              offerCode: "NEW",
-              duration: "ONE_WEEK",
-            }),
-          }),
-        })
-      );
-
-      expect(result).toEqual({
-        success: true,
-        data: expect.objectContaining({ id: "po1", name: "New Name" }),
+      expect(result).toMatchObject({
+        success: false,
+        error: { code: "VALIDATION_ERROR", message: expect.stringContaining("Only prices") },
       });
+      expect(mockClient.patch).not.toHaveBeenCalled();
     });
 
-    it("should include prices in request when provided", async () => {
+    it("replaces the price list through relationships and inline prices only", async () => {
       mockClient.patch.mockResolvedValueOnce({
         data: {
           id: "po1",
@@ -1858,98 +1857,36 @@ describe("Subscription Tools", () => {
         prices: [{ territory: "GBR", pricePointId: "pp2" }],
       });
 
-      const callArg = mockClient.patch.mock.calls[0][1] as Record<string, unknown>;
-      expect(callArg).toHaveProperty("included");
-      expect(callArg.data as Record<string, unknown>).toHaveProperty("relationships");
-    });
-
-    it("should send empty prices as an explicit replacement", async () => {
-      mockClient.patch.mockResolvedValueOnce({
+      expect(mockClient.patch).toHaveBeenCalledWith("/subscriptionPromotionalOffers/po1", {
         data: {
-          id: "po1",
           type: "subscriptionPromotionalOffers",
-          attributes: {
-            name: "Offer",
-            offerCode: "X",
-            duration: "ONE_MONTH",
-            offerMode: "FREE_TRIAL",
-            numberOfPeriods: undefined,
+          id: "po1",
+          relationships: {
+            prices: { data: [{ type: "subscriptionPromotionalOfferPrices", id: "${GBR-promo}" }] },
           },
         },
+        included: [
+          {
+            type: "subscriptionPromotionalOfferPrices",
+            id: "${GBR-promo}",
+            relationships: {
+              subscriptionPricePoint: { data: { type: "subscriptionPricePoints", id: "pp2" } },
+              territory: { data: { type: "territories", id: "GBR" } },
+            },
+          },
+        ],
       });
+      expectContract(mockClient);
+    });
 
-      await updatePromotionalOffer(mockClient as unknown as AppStoreConnectClient, {
+    it("refuses an empty price list", async () => {
+      const result = await updatePromotionalOffer(mockClient as unknown as AppStoreConnectClient, {
         promotionalOfferId: "po1",
         prices: [],
       });
 
-      expect(mockClient.patch).toHaveBeenCalledWith(
-        "/subscriptionPromotionalOffers/po1",
-        expect.objectContaining({
-          data: expect.objectContaining({
-            relationships: { prices: { data: [] } },
-          }),
-        })
-      );
-      expect(mockClient.patch.mock.calls[0][1]).not.toHaveProperty("included");
-    });
-
-    it("should require periodCount and prices when changing to a paid mode", async () => {
-      const result = await updatePromotionalOffer(mockClient as unknown as AppStoreConnectClient, {
-        promotionalOfferId: "po1",
-        offerMode: "PAY_AS_YOU_GO",
-      });
-
-      expect(result).toEqual({
-        success: false,
-        error: expect.objectContaining({ code: "VALIDATION_ERROR" }),
-      });
+      expect(result).toMatchObject({ success: false, error: { code: "VALIDATION_ERROR" } });
       expect(mockClient.patch).not.toHaveBeenCalled();
-    });
-
-    it("should allow changing to a paid mode with periodCount and prices", async () => {
-      mockClient.patch.mockResolvedValueOnce({
-        data: {
-          id: "po1",
-          type: "subscriptionPromotionalOffers",
-          attributes: {
-            name: "Offer",
-            offerCode: "X",
-            duration: "ONE_MONTH",
-            offerMode: "PAY_AS_YOU_GO",
-            numberOfPeriods: 2,
-          },
-        },
-      });
-
-      const result = await updatePromotionalOffer(mockClient as unknown as AppStoreConnectClient, {
-        promotionalOfferId: "po1",
-        offerMode: "PAY_AS_YOU_GO",
-        periodCount: 2,
-        prices: [{ territory: "USA", pricePointId: "pp1" }],
-      });
-
-      expect(mockClient.patch).toHaveBeenCalledWith(
-        "/subscriptionPromotionalOffers/po1",
-        expect.objectContaining({
-          data: expect.objectContaining({
-            attributes: expect.objectContaining({
-              offerMode: "PAY_AS_YOU_GO",
-              numberOfPeriods: 2,
-            }),
-            relationships: {
-              prices: {
-                data: [{ type: "subscriptionPromotionalOfferPrices", id: "${USA-promo}" }],
-              },
-            },
-          }),
-          included: expect.any(Array),
-        })
-      );
-      expect(result).toEqual({
-        success: true,
-        data: expect.objectContaining({ id: "po1", offerMode: "PAY_AS_YOU_GO", periodCount: 2 }),
-      });
     });
 
     it("should reject duplicate update price territories", async () => {

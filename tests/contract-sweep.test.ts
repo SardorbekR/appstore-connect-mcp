@@ -2,8 +2,7 @@
  * Contract sweep for existing write tools. Each tool runs against a mock client with a minimal
  * valid input, and every request it would send is checked against Apple's OpenAPI spec.
  *
- * A failing test is a finding about the tool's request: fix the tool, not the test. Known
- * pre-existing bugs are marked it.fails until their tool is fixed.
+ * A failing test is a finding about the tool's request: fix the tool, not the test.
  */
 
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -63,6 +62,7 @@ const createMockClient = () => ({
   delete: vi.fn(),
   requestRaw: vi.fn(),
   rawRequest: vi.fn(),
+  paginate: vi.fn(),
 });
 
 type MockClient = ReturnType<typeof createMockClient>;
@@ -374,10 +374,13 @@ describe("contract sweep: subscriptions", () => {
     expect(contractOf(client)).toEqual([]);
   });
 
-  // Known contract bug (pre-existing): sends no availableTerritories relationship when territories is omitted; the spec requires it.
-  // it.fails passes while the bug exists; fix the tool, then change this back to it().
-  it.fails("set_subscription_availability", async () => {
+  // Without territories the current ones are re-sent (Apple requires the relationship)
+  it("set_subscription_availability", async () => {
     const client = createMockClient();
+    client.get.mockResolvedValue(resource("subscriptionAvailabilities", "a0"));
+    client.paginate.mockImplementation(async function* () {
+      yield resource("territories", "USA", { currency: "USD" }).data;
+    });
     client.post.mockResolvedValue(resource("subscriptionAvailabilities", "a1"));
     const result = await setSubscriptionAvailability(asClient(client), {
       subscriptionId: "s1",
@@ -398,9 +401,7 @@ describe("contract sweep: subscriptions", () => {
     expect(contractOf(client)).toEqual([]);
   });
 
-  // Known contract bug (pre-existing): FREE_TRIAL without periodCount sends no numberOfPeriods; the spec requires it for every mode.
-  // it.fails passes while the bug exists; fix the tool, then change this back to it().
-  it.fails("create_promotional_offer", async () => {
+  it("create_promotional_offer", async () => {
     const client = createMockClient();
     client.post.mockResolvedValue(
       resource("subscriptionPromotionalOffers", "po1", { name: "Trial", offerCode: "TRIAL" })
@@ -411,21 +412,21 @@ describe("contract sweep: subscriptions", () => {
       offerCode: "TRIAL",
       duration: "ONE_WEEK",
       offerMode: "FREE_TRIAL",
+      periodCount: 1,
+      prices: [{ territory: "USA" }],
     });
     expect(result).toMatchObject({ success: true });
     expect(contractOf(client)).toEqual([]);
   });
 
-  // Known contract bug (pre-existing): always sends data.attributes; the update schema only allows relationships.prices.
-  // it.fails passes while the bug exists; fix the tool, then change this back to it().
-  it.fails("update_promotional_offer", async () => {
+  it("update_promotional_offer", async () => {
     const client = createMockClient();
     client.patch.mockResolvedValue(
-      resource("subscriptionPromotionalOffers", "po1", { name: "Trial 2" })
+      resource("subscriptionPromotionalOffers", "po1", { name: "Trial" })
     );
     const result = await updatePromotionalOffer(asClient(client), {
       promotionalOfferId: "po1",
-      name: "Trial 2",
+      prices: [{ territory: "USA", pricePointId: "pp1" }],
     });
     expect(result).toMatchObject({ success: true });
     expect(contractOf(client)).toEqual([]);
@@ -520,10 +521,13 @@ describe("contract sweep: in-app purchases", () => {
     expect(contractOf(client)).toEqual([]);
   });
 
-  // Known contract bug (pre-existing): sends no availableTerritories relationship when territories is omitted; the spec requires it.
-  // it.fails passes while the bug exists; fix the tool, then change this back to it().
-  it.fails("set_in_app_purchase_availability", async () => {
+  // Without territories the current ones are re-sent (Apple requires the relationship)
+  it("set_in_app_purchase_availability", async () => {
     const client = createMockClient();
+    client.get.mockResolvedValue(resource("inAppPurchaseAvailabilities", "av0"));
+    client.paginate.mockImplementation(async function* () {
+      yield resource("territories", "USA", { currency: "USD" }).data;
+    });
     client.post.mockResolvedValue(
       resource("inAppPurchaseAvailabilities", "av1", { availableInNewTerritories: true })
     );

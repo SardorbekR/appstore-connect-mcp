@@ -744,17 +744,20 @@ export const subscriptionOfferDurationSchema = z.enum([
 
 export const subscriptionOfferModeSchema = z.enum(["FREE_TRIAL", "PAY_AS_YOU_GO", "PAY_UP_FRONT"]);
 
+// Paid offers need a price point per territory; free trials list territories only
 const promotionalOfferPriceEntrySchema = z.object({
   territory: territoryIdSchema,
-  pricePointId: z.string().min(1, "Price point ID is required"),
+  pricePointId: z.string().min(1, "Price point ID cannot be empty").optional(),
 });
+
+type PromotionalOfferPriceEntry = z.infer<typeof promotionalOfferPriceEntrySchema>;
 
 function isPaidPromotionalOfferMode(offerMode: string | undefined): boolean {
   return offerMode === "PAY_AS_YOU_GO" || offerMode === "PAY_UP_FRONT";
 }
 
 function addDuplicatePromotionalOfferTerritoryIssues(
-  prices: Array<{ territory: string; pricePointId: string }> | undefined,
+  prices: PromotionalOfferPriceEntry[] | undefined,
   ctx: z.RefinementCtx
 ): void {
   if (!prices) return;
@@ -775,25 +778,31 @@ function addDuplicatePromotionalOfferTerritoryIssues(
 }
 
 function addPromotionalOfferModeIssues(
-  offerMode: z.infer<typeof subscriptionOfferModeSchema> | undefined,
-  periodCount: number | undefined,
-  prices: Array<{ territory: string; pricePointId: string }> | undefined,
+  offerMode: z.infer<typeof subscriptionOfferModeSchema>,
+  prices: PromotionalOfferPriceEntry[] | undefined,
   ctx: z.RefinementCtx
 ): void {
-  if (!isPaidPromotionalOfferMode(offerMode)) return;
-
-  if (periodCount === undefined) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Period count is required for paid promotional offers",
-      path: ["periodCount"],
-    });
+  if (!isPaidPromotionalOfferMode(offerMode)) {
+    if (prices?.some((price) => price.pricePointId !== undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "FREE_TRIAL offers have no price; list territories without pricePointId",
+        path: ["prices"],
+      });
+    }
+    return;
   }
 
   if (!prices || prices.length === 0) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: "At least one price is required for paid promotional offers",
+      path: ["prices"],
+    });
+  } else if (prices.some((price) => price.pricePointId === undefined)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Paid promotional offers need a pricePointId for every territory",
       path: ["prices"],
     });
   }
@@ -813,27 +822,28 @@ export const createPromotionalOfferInputSchema = z
     offerCode: z.string().min(1, "Offer code is required"),
     duration: subscriptionOfferDurationSchema,
     offerMode: subscriptionOfferModeSchema,
-    periodCount: z.number().int().min(1).optional(),
+    // Apple requires numberOfPeriods for every mode, free trials included
+    periodCount: z.number().int().min(1, "periodCount must be at least 1"),
     prices: z.array(promotionalOfferPriceEntrySchema).optional(),
   })
   .superRefine((params, ctx) => {
-    addPromotionalOfferModeIssues(params.offerMode, params.periodCount, params.prices, ctx);
+    addPromotionalOfferModeIssues(params.offerMode, params.prices, ctx);
     addDuplicatePromotionalOfferTerritoryIssues(params.prices, ctx);
   });
 
-// Update promotional offer input
+// Update promotional offer input. Apple's update request accepts only the price list;
+// name, code, duration, mode, and periods are fixed once the offer exists.
 export const updatePromotionalOfferInputSchema = z
   .object({
     promotionalOfferId: z.string().min(1, "Promotional offer ID is required"),
-    name: z.string().min(1).optional(),
-    offerCode: z.string().min(1).optional(),
-    duration: subscriptionOfferDurationSchema.optional(),
-    offerMode: subscriptionOfferModeSchema.optional(),
-    periodCount: z.number().int().min(1).optional(),
-    prices: z.array(promotionalOfferPriceEntrySchema).optional(),
+    prices: z
+      .array(promotionalOfferPriceEntrySchema)
+      .min(1, "Provide the offer's full replacement price list"),
   })
+  .strict(
+    "Only prices can be updated. Apple does not allow changing a promotional offer's name, code, duration, mode, or number of periods; delete and recreate the offer instead."
+  )
   .superRefine((params, ctx) => {
-    addPromotionalOfferModeIssues(params.offerMode, params.periodCount, params.prices, ctx);
     addDuplicatePromotionalOfferTerritoryIssues(params.prices, ctx);
   });
 
@@ -852,7 +862,8 @@ export const listPromotionalOfferPricesInputSchema = z.object({
 export const setSubscriptionAvailabilityInputSchema = z.object({
   subscriptionId: z.string().min(1, "Subscription ID is required"),
   availableInNewTerritories: z.boolean(),
-  territories: z.array(territoryIdSchema).optional(),
+  // Omitted: keep the current territories. An explicit list replaces them and cannot be empty.
+  territories: z.array(territoryIdSchema).min(1, "territories cannot be empty").optional(),
 });
 
 // Create subscription price input
@@ -964,7 +975,8 @@ export const getInAppPurchaseAvailabilityInputSchema = z.object({
 export const setInAppPurchaseAvailabilityInputSchema = z.object({
   inAppPurchaseId: z.string().min(1, "In-app purchase ID is required"),
   availableInNewTerritories: z.boolean(),
-  territories: z.array(territoryIdSchema).optional(),
+  // Omitted: keep the current territories. An explicit list replaces them and cannot be empty.
+  territories: z.array(territoryIdSchema).min(1, "territories cannot be empty").optional(),
 });
 
 export const submitInAppPurchaseForReviewInputSchema = z.object({
