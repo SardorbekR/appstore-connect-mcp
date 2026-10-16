@@ -9,14 +9,17 @@ import { ConfigError } from "../src/utils/errors.js";
 // Mock jose module
 vi.mock("jose", () => ({
   importPKCS8: vi.fn().mockResolvedValue("mock-key"),
-  SignJWT: vi.fn().mockImplementation(() => ({
-    setProtectedHeader: vi.fn().mockReturnThis(),
-    setIssuer: vi.fn().mockReturnThis(),
-    setIssuedAt: vi.fn().mockReturnThis(),
-    setExpirationTime: vi.fn().mockReturnThis(),
-    setAudience: vi.fn().mockReturnThis(),
-    sign: vi.fn().mockResolvedValue("mock.jwt.token"),
-  })),
+  // Vitest 4+ requires a constructible implementation (class or function, not an arrow) for `new`.
+  SignJWT: vi.fn().mockImplementation(
+    class {
+      setProtectedHeader = vi.fn().mockReturnThis();
+      setIssuer = vi.fn().mockReturnThis();
+      setIssuedAt = vi.fn().mockReturnThis();
+      setExpirationTime = vi.fn().mockReturnThis();
+      setAudience = vi.fn().mockReturnThis();
+      sign = vi.fn().mockResolvedValue("mock.jwt.token");
+    }
+  ),
 }));
 
 describe("TokenManager", () => {
