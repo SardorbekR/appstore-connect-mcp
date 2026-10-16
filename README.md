@@ -8,21 +8,28 @@ A Model Context Protocol (MCP) server for Apple's App Store Connect API. Manage 
 
 ## Features
 
+- **Any API Operation** - Call any of the 1,303 App Store Connect API operations through `asc_api_request`, validated against Apple's OpenAPI spec, with `asc_api_search` and `asc_api_describe` to find and inspect them
+- **Submission & Release** - Edit version metadata (copyright, version string, release type), attach builds, App Review details, review submissions, phased and manual release, export compliance
+- **App Info** - Categories, age rating declaration, app info localizations, custom EULA
 - **App Store Localizations** - Full CRUD for version descriptions, keywords, and what's new
 - **App Management** - List and inspect apps across all platforms
 - **Version Control** - Create and manage app store versions
-- **Beta Testing** - Manage TestFlight groups and testers
-- **Screenshot Management** - Upload and organize app screenshots
+- **TestFlight** - Groups, build access, testers and invitations, What to Test notes, beta app localizations, beta review submissions
+- **Screenshots & Previews** - Upload, reorder, and delete screenshots and app previews; review screenshots for subscriptions and in-app purchases
+- **Customer Reviews** - Read reviews and publish or remove responses
 - **Bundle ID Management** - Full CRUD for bundle identifiers
 - **Device Management** - List and inspect registered devices
 - **User Management** - List and inspect team users
 - **Build Management** - List and inspect app builds
 - **Category & Pricing** - Browse categories, check pricing and availability
 - **Pricing & PPP** - Set per-territory pricing with Purchase Power Parity support
-- **In-App Purchases** - Create and manage one-time purchases (lifetime/non-consumable, consumable, non-renewing): metadata, localization, pricing & PPP, availability, and review submission (review-screenshot upload excluded)
+- **Subscriptions** - Groups, subscriptions, localizations, pricing & PPP, availability, promotional, introductory and win-back offers, offer codes
+- **In-App Purchases** - Create and manage one-time purchases (lifetime/non-consumable, consumable, non-renewing): metadata, localization, pricing & PPP, availability, offer codes, review screenshots, and review submission
+- **Custom Product Pages** - Pages, versions, and per-locale promotional text
 - **Analytics Reports** - Request and download app analytics reports (engagement, commerce, usage, performance)
 - **Sales & Finance** - Download sales, trends, and financial reports
 - **Performance & Diagnostics** - App/build power & performance metrics and diagnostic logs
+- **Toolsets & Read-Only Mode** - Expose only the tool groups you need, or block every write with `ASC_READ_ONLY=1`
 - **Secure by Default** - ES256 JWT auth with automatic token refresh, credential redaction in logs
 
 ## Table of Contents
@@ -96,6 +103,14 @@ npm run build
 | `APP_STORE_CONNECT_P8_CONTENT` | Yes* | Raw content of `.p8` key (alternative to path) |
 
 *One of `P8_PATH` or `P8_CONTENT` is required.
+
+Optional settings:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ASC_TOOLSETS` | all | Comma-separated tool groups to expose: `apps`, `versions`, `media`, `testflight`, `pricing`, `subscriptions`, `iap`, `reviews`, `product-pages`, `provisioning`, `users`, `analytics`, `api`. Fewer tools means less context in clients with small tool budgets. The `api` group reaches every operation, including ones outside the other groups. |
+| `ASC_READ_ONLY` | off | `1` exposes only read tools and makes the client refuse every non-GET request |
+| `ASC_MAX_RESPONSE_CHARS` | 80000 | Size cap for `asc_api_request` results; larger results end at a page boundary with a `cursor` to continue |
 
 ### MCP Client Configuration
 
@@ -345,6 +360,222 @@ One-time purchases via Apple's In-App Purchases v2 API. `create_in_app_purchase`
 | `list_diagnostic_signatures` | List diagnostic signatures for a build | `buildId` |
 | `list_diagnostic_logs` | List diagnostic logs for a signature | `signatureId` |
 
+### Any API Operation (generic)
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `asc_api_request` | Call any App Store Connect API operation (1303 operations from Apple's OpenAPI 4.5.1). | `method?`, `path?`, `query?`, `body?`, `paginate?`, `maxItems?`, `cursor?`, `allowUnknown?` |
+| `asc_api_search` | Search the App Store Connect API operation index by keywords (matches paths, operation IDs, resource types), e.g. 'phased release', 'customer reviews', 'offer codes'. | `query`, `method?`, `limit?` |
+| `asc_api_describe` | Describe one App Store Connect API operation: query parameters with allowed values, body attributes (types, enums, required), relationships, and a minimal body template. | `method`, `path` |
+
+### Subscriptions
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `list_subscription_groups` | List all subscription groups for an app. | `appId`, `limit?` |
+| `get_subscription_group` | Get details of a specific subscription group by its ID. | `subscriptionGroupId` |
+| `create_subscription_group` | Create a new subscription group for an app. | `appId`, `referenceName` |
+| `update_subscription_group` | Update the reference name of a subscription group. | `subscriptionGroupId`, `referenceName` |
+| `list_subscription_group_localizations` | List the localizations for a subscription group. | `subscriptionGroupId`, `limit?` |
+| `get_subscription_group_localization` | Get a single subscription group localization by its ID. | `localizationId` |
+| `create_subscription_group_localization` | Create a localization for a subscription group. | `subscriptionGroupId`, `name`, `locale`, `customAppName?`, `customAppDescription?` |
+| `update_subscription_group_localization` | Update an existing subscription group localization. | `localizationId`, `name?`, `customAppName?`, `customAppDescription?` |
+| `list_subscriptions` | List all auto-renewable subscriptions within a subscription group. | `subscriptionGroupId`, `limit?` |
+| `get_subscription` | Get details of a specific auto-renewable subscription by its ID. | `subscriptionId` |
+| `create_subscription` | Create a new auto-renewable subscription within a subscription group. | `subscriptionGroupId`, `name`, `productId`, `subscriptionPeriod`, `familySharable?`, `reviewNote?`, `groupLevel?` |
+| `update_subscription` | Update the metadata of an existing auto-renewable subscription. | `subscriptionId`, `name?`, `familySharable?`, `subscriptionPeriod?`, `reviewNote?`, `groupLevel?` |
+| `delete_subscription` | Delete an auto-renewable subscription. | `subscriptionId` |
+| `list_subscription_localizations` | List all localizations (translated names and descriptions) for a subscription. | `subscriptionId`, `limit?` |
+| `create_subscription_localization` | Create a localized name and description for a subscription in a specific locale. | `subscriptionId`, `name`, `locale`, `description?` |
+| `update_subscription_localization` | Update the localized name or description for a subscription localization. | `localizationId`, `name?`, `description?` |
+| `delete_subscription_localization` | Delete a localization for a subscription. | `localizationId` |
+| `list_subscription_price_points` | List available price points for a subscription, showing customer price and developer proceeds. | `subscriptionId`, `territory?`, `limit?`, `offset?` |
+| `list_subscription_prices` | List the current prices set for a subscription, including price tier and territory details. | `subscriptionId`, `territory?`, `limit?` |
+| `get_subscription_availability` | Get the territory availability configuration for a subscription — shows which territories it is available in and whether it is automatically available in new territories. | `subscriptionId` |
+| `set_subscription_availability` | Set the territory availability for a subscription. | `subscriptionId`, `availableInNewTerritories`, `territories?` |
+| `create_subscription_price` | Set the price for a subscription in a specific territory. | `subscriptionId`, `subscriptionPricePointId`, `startDate?`, `preserveCurrentPrice?` |
+| `list_promotional_offers` | List all promotional offers configured for a subscription. | `subscriptionId`, `limit?` |
+| `create_promotional_offer` | Create a promotional offer for a subscription. | `subscriptionId`, `name`, `offerCode`, `duration`, `offerMode`, `periodCount?`, `prices?` |
+| `update_promotional_offer` | Update an existing promotional offer's attributes or prices. | `promotionalOfferId`, `name?`, `offerCode?`, `duration?`, `offerMode?`, `periodCount?`, `prices?` |
+| `delete_promotional_offer` | Delete a promotional offer from a subscription. | `promotionalOfferId` |
+| `list_promotional_offer_prices` | List the prices set for a promotional offer, with resolved price tier and territory details. | `promotionalOfferId`, `limit?` |
+
+### Version Admin & App Review Details
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `update_app_version` | Update an App Store version's version string, copyright, release type, or scheduled release date. | `versionId`, `versionString?`, `copyright?`, `releaseType?`, `earliestReleaseDate?` |
+| `delete_app_version` | Delete an App Store version. | `versionId` |
+| `get_app_version_build` | Get the build attached to an App Store version (null when none is attached). | `versionId` |
+| `set_app_version_build` | Attach a build to an App Store version. | `versionId`, `buildId` |
+| `get_review_detail` | Get the App Review details for a version: contact, demo account, and review notes. | `versionId` |
+| `create_review_detail` | Create App Review details for a version that has none. contactFirstName and contactPhone are required. | `versionId`, `contactFirstName`, `contactPhone`, `contactLastName?`, `contactEmail?`, `demoAccountName?`, `demoAccountPassword?`, `demoAccountRequired?`, `notes?` |
+| `update_review_detail` | Update App Review details (contact, demo account, notes). | `reviewDetailId`, `contactFirstName?`, `contactLastName?`, `contactPhone?`, `contactEmail?`, `demoAccountName?`, `demoAccountPassword?`, `demoAccountRequired?`, `notes?` |
+
+### Release & Export Compliance
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `get_phased_release` | Get the phased release (gradual rollout) of an App Store version. | `versionId` |
+| `create_phased_release` | Create a phased release for an App Store version. | `versionId`, `phasedReleaseState?` |
+| `update_phased_release` | Change a phased release to ACTIVE, PAUSED, or COMPLETE. | `phasedReleaseId`, `phasedReleaseState`, `confirmReleaseToAll?` |
+| `delete_phased_release` | Delete a phased release for an App Store version. | `phasedReleaseId` |
+| `release_app_version` | Release an App Store version that is approved and waiting for developer release (PENDING_DEVELOPER_RELEASE). | `versionId` |
+| `list_encryption_declarations` | List export compliance (encryption) declarations for an app. | `appId`, `limit?` |
+| `get_encryption_declaration` | Get one export compliance (encryption) declaration by ID. | `declarationId` |
+| `create_encryption_declaration` | Create an export compliance (encryption) declaration for an app. | `appId`, `appDescription`, `containsProprietaryCryptography`, `containsThirdPartyCryptography`, `availableOnFrenchStore` |
+| `assign_builds_to_encryption_declaration` | Link builds to an encryption declaration. | `declarationId`, `buildIds` |
+| `update_build` | Update a build's usesNonExemptEncryption flag, its encryption declaration, or expire it. | `buildId`, `expired?`, `confirmExpire?`, `usesNonExemptEncryption?`, `appEncryptionDeclarationId?` |
+
+### App Review Submissions
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `list_review_submissions` | List review submissions for an app, optionally filtered by state or platform. | `appId`, `state?`, `platform?`, `limit?` |
+| `get_review_submission` | Get a review submission with the items it contains. | `submissionId` |
+| `create_review_submission` | Create a review submission for one platform of an app. | `appId`, `platform` |
+| `add_review_submission_item` | Add one item to a review submission. | `submissionId`, `itemType`, `itemId` |
+| `remove_review_submission_item` | Remove an item from a review submission. | `itemId` |
+| `submit_review_submission` | Submit a review submission to App Review. | `submissionId`, `expectedItemIds` |
+| `cancel_review_submission` | Cancel a review submission that is in progress. | `submissionId` |
+
+### App Info: Categories, Age Rating, EULA
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `get_app_info_categories` | Get the primary and secondary App Store categories and subcategories of an app info record. | `appInfoId` |
+| `set_app_categories` | Set one or more App Store categories or subcategories on an app info record. | `appInfoId`, `primaryCategoryId?`, `primarySubcategoryOneId?`, `primarySubcategoryTwoId?`, `secondaryCategoryId?`, `secondarySubcategoryOneId?`, `secondarySubcategoryTwoId?` |
+| `list_app_subcategories` | List the subcategories of an App Store category, for example the subcategories of GAMES. | `categoryId`, `limit?` |
+| `get_age_rating_declaration` | Get the age rating questionnaire answers for an app info record. | `appInfoId` |
+| `update_age_rating_declaration` | Update age rating questionnaire answers. | `declarationId`, `attributes` |
+| `create_app_info_localization` | Create an app info localization (name, subtitle, privacy links) for a locale. | `appInfoId`, `locale`, `name`, `subtitle?`, `privacyPolicyUrl?`, `privacyChoicesUrl?`, `privacyPolicyText?` |
+| `delete_app_info_localization` | Delete an app info localization. | `localizationId` |
+| `get_eula` | Get the custom end user license agreement for an app. | `appId` |
+| `create_eula` | Create a custom end user license agreement for an app, applied to the given territories (e.g. | `appId`, `agreementText`, `territories` |
+| `update_eula` | Update an app's custom EULA text and/or territories. | `eulaId`, `agreementText?`, `territories?` |
+| `delete_eula` | Delete an app's custom end user license agreement. | `eulaId` |
+
+### Media: Screenshot Sets, App Previews, Review Screenshots
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `create_screenshot_set` | Create a screenshot set for one device display size in an App Store version localization. | `localizationId`, `screenshotDisplayType` |
+| `delete_screenshot_set` | Delete a screenshot set and every screenshot in it. | `screenshotSetId` |
+| `delete_screenshot` | Delete one screenshot from its screenshot set. | `screenshotId` |
+| `reorder_screenshots` | Set the display order of the screenshots in a set. screenshotIds must list every current screenshot in the set exactly once, in the new order; get the IDs with list_screenshots. | `screenshotSetId`, `screenshotIds` |
+| `list_preview_sets` | List the app preview sets (one per device type) in an App Store version localization. | `localizationId`, `limit?` |
+| `create_preview_set` | Create an app preview set for one device type in an App Store version localization. | `localizationId`, `previewType` |
+| `delete_preview_set` | Delete an app preview set and every app preview in it. | `previewSetId` |
+| `list_previews` | List the app previews (videos) in an app preview set. | `previewSetId`, `limit?` |
+| `upload_app_preview` | Upload a .mov, .m4v, or .mp4 video as an app preview. | `previewSetId`, `filePath`, `fileName?`, `previewFrameTimeCode?`, `waitForProcessing?` |
+| `delete_app_preview` | Delete one app preview from its preview set. | `previewId` |
+| `reorder_previews` | Set the display order of the app previews in a preview set. previewIds must list every current preview in the set exactly once, in the new order; get the IDs with list_previews. | `previewSetId`, `previewIds` |
+| `upload_subscription_review_screenshot` | Upload the App Review screenshot for a subscription from a local file. | `subscriptionId`, `filePath`, `fileName?` |
+| `upload_iap_review_screenshot` | Upload the App Review screenshot for an in-app purchase from a local file. | `inAppPurchaseId`, `filePath`, `fileName?` |
+
+### TestFlight Groups
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `get_beta_group` | Get a beta group's settings, including its public TestFlight link. | `betaGroupId` |
+| `create_beta_group` | Create a beta group for an app. | `appId`, `name`, `isInternalGroup?`, `hasAccessToAllBuilds?`, `publicLinkEnabled?`, `publicLinkLimitEnabled?`, `publicLinkLimit?`, `feedbackEnabled?` |
+| `update_beta_group` | Update a beta group's settings. | `betaGroupId`, `name?`, `publicLinkEnabled?`, `publicLinkLimitEnabled?`, `publicLinkLimit?`, `feedbackEnabled?`, `iosBuildsAvailableForAppleSiliconMac?`, `iosBuildsAvailableForAppleVision?` |
+| `delete_beta_group` | Delete a beta group. | `betaGroupId` |
+| `list_beta_group_builds` | List the builds available to a beta group. | `betaGroupId`, `limit?` |
+| `add_builds_to_beta_group` | Make one or more builds available to a beta group. | `betaGroupId`, `buildIds` |
+| `remove_builds_from_beta_group` | Remove one or more builds from a beta group. | `betaGroupId`, `buildIds` |
+| `add_testers_to_beta_group` | Add existing beta testers to a beta group by tester ID. | `betaGroupId`, `betaTesterIds` |
+| `delete_beta_tester` | Delete a beta tester from the account. | `betaTesterId` |
+| `invite_beta_tester` | Send an existing beta tester an invitation to test an app. | `appId`, `betaTesterId` |
+
+### TestFlight Builds & Beta Review
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `list_beta_build_localizations` | List the TestFlight 'What to Test' notes for a build, one per locale. | `buildId`, `limit?` |
+| `create_beta_build_localization` | Add 'What to Test' notes for a build in one locale. | `buildId`, `locale`, `whatsNew?` |
+| `update_beta_build_localization` | Replace the 'What to Test' notes of a build localization. | `localizationId`, `whatsNew` |
+| `delete_beta_build_localization` | Delete the 'What to Test' notes of a build for one locale. | `localizationId` |
+| `list_beta_app_localizations` | List the TestFlight app details (description, feedback email, URLs) for an app, one per locale. | `appId`, `limit?` |
+| `create_beta_app_localization` | Add TestFlight app details for an app in one locale. | `appId`, `locale`, `description?`, `feedbackEmail?`, `marketingUrl?`, `privacyPolicyUrl?`, `tvOsPrivacyPolicy?` |
+| `update_beta_app_localization` | Update the TestFlight app details for one locale. | `localizationId`, `description?`, `feedbackEmail?`, `marketingUrl?`, `privacyPolicyUrl?`, `tvOsPrivacyPolicy?` |
+| `delete_beta_app_localization` | Delete the TestFlight app details for one locale. | `localizationId` |
+| `get_beta_app_review_detail` | Get the TestFlight beta App Review details for an app: contact, demo account, and notes. | `appId` |
+| `update_beta_app_review_detail` | Update the TestFlight beta App Review details (contact, demo account, notes). | `reviewDetailId`, `contactFirstName?`, `contactLastName?`, `contactPhone?`, `contactEmail?`, `demoAccountName?`, `demoAccountPassword?`, `demoAccountRequired?`, `notes?` |
+| `submit_build_for_beta_review` | Submit a build to TestFlight beta App Review so it can be shared with external testers. | `buildId` |
+| `list_beta_review_submissions` | List the TestFlight beta App Review submissions for a build, optionally filtered by review state. | `buildId`, `betaReviewState?`, `limit?` |
+| `get_build_beta_detail` | Get the TestFlight settings and processing states for a build (auto-notify, internal and external state). | `buildId` |
+| `update_build_beta_detail` | Turn automatic tester notifications on or off for a build. | `buildBetaDetailId`, `autoNotifyEnabled` |
+| `list_pre_release_versions` | List the TestFlight pre-release versions (version string and platform) of an app. | `appId`, `limit?` |
+
+### Customer Reviews
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `list_customer_reviews` | List customer reviews for an app, each with its developer response when one exists. | `appId`, `rating?`, `territory?`, `sort?`, `hasResponse?`, `limit?` |
+| `get_customer_review` | Get one customer review by ID, including its developer response when one exists. | `reviewId` |
+| `get_review_response` | Get the developer response to a customer review (null when there is none). | `reviewId` |
+| `create_review_response` | Publish a developer response to a customer review. | `reviewId`, `responseBody` |
+| `delete_review_response` | Delete a developer response to a customer review. | `responseId` |
+
+### Subscription Offers (Introductory & Win-Back)
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `list_introductory_offers` | List introductory offers for a subscription, with territory and price point IDs. | `subscriptionId`, `territoryId?`, `limit?` |
+| `create_introductory_offer` | Create an introductory offer for a subscription in one territory. | `subscriptionId`, `duration`, `offerMode`, `numberOfPeriods`, `startDate?`, `endDate?`, `targetSubscriptionPlanType?`, `territoryId?`, `pricePointId?` |
+| `update_introductory_offer` | Change the end date of an introductory offer. | `introductoryOfferId`, `endDate` |
+| `delete_introductory_offer` | Delete an introductory offer by ID. | `introductoryOfferId` |
+| `list_win_back_offers` | List win-back offers for a subscription. | `subscriptionId`, `limit?` |
+| `create_win_back_offer` | Create a win-back offer for lapsed subscribers, with one price entry per territory. | `subscriptionId`, `referenceName`, `offerId`, `duration`, `offerMode`, `periodCount`, `customerEligibilityPaidSubscriptionDurationInMonths`, `customerEligibilityTimeSinceLastSubscribedInMonths`, `startDate`, `priority`, `prices`, `customerEligibilityWaitBetweenOffersInMonths?`, `endDate?`, `promotionIntent?`, `targetSubscriptionPlanType?` |
+| `update_win_back_offer` | Update a win-back offer's eligibility, dates, priority, or promotion intent. | `winBackOfferId`, `customerEligibilityPaidSubscriptionDurationInMonths?`, `customerEligibilityTimeSinceLastSubscribedInMonths?`, `customerEligibilityWaitBetweenOffersInMonths?`, `startDate?`, `endDate?`, `priority?`, `promotionIntent?` |
+| `delete_win_back_offer` | Delete a win-back offer by ID. | `winBackOfferId` |
+| `list_win_back_offer_prices` | List the per-territory prices of a win-back offer, with territory and price point IDs. | `winBackOfferId`, `territoryId?`, `limit?` |
+
+### Subscription Offer Codes
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `list_subscription_offer_codes` | List the offer codes for a subscription, optionally filtered by territory codes such as USA. | `subscriptionId`, `territories?`, `limit?` |
+| `get_subscription_offer_code` | Get one subscription offer code by ID, including its code counts and state. | `offerCodeId` |
+| `create_subscription_offer_code` | Create a subscription offer code. | `subscriptionId`, `name`, `customerEligibilities`, `offerEligibility`, `duration`, `offerMode`, `numberOfPeriods`, `autoRenewEnabled?`, `targetSubscriptionPlanType?`, `prices?` |
+| `update_subscription_offer_code` | Activate or deactivate a subscription offer code. | `offerCodeId`, `active` |
+| `create_subscription_one_time_codes` | Generate a batch of one-time use redemption codes for a subscription offer code. | `offerCodeId`, `numberOfCodes`, `expirationDate`, `environment?` |
+| `list_subscription_one_time_code_batches` | List the one-time use code batches generated for a subscription offer code. | `offerCodeId`, `limit?` |
+| `get_subscription_one_time_code_values` | Download the redemption codes of a one-time use code batch as CSV text. | `oneTimeUseCodeBatchId` |
+| `create_subscription_custom_code` | Create a custom (vanity) redemption code for a subscription offer code, optionally with an expiration date. | `offerCodeId`, `customCode`, `numberOfCodes`, `expirationDate?` |
+| `list_subscription_custom_codes` | List the custom codes created for a subscription offer code. | `offerCodeId`, `limit?` |
+
+### In-App Purchase Offer Codes
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `list_iap_offer_codes` | List the offer codes configured for an in-app purchase. | `inAppPurchaseId`, `limit?` |
+| `get_iap_offer_code` | Get one in-app purchase offer code by ID. | `offerCodeId` |
+| `create_iap_offer_code` | Create an in-app purchase offer code with a price per territory. | `inAppPurchaseId`, `name`, `customerEligibilities`, `prices` |
+| `update_iap_offer_code` | Activate or deactivate an in-app purchase offer code. | `offerCodeId`, `active` |
+| `create_iap_one_time_codes` | Generate a batch of one-time-use redemption codes for an offer code. | `offerCodeId`, `numberOfCodes`, `expirationDate`, `environment?` |
+| `list_iap_one_time_code_batches` | List the one-time-use code batches generated for an offer code, with counts and expiry dates. | `offerCodeId`, `limit?` |
+| `get_iap_one_time_code_values` | Get the redemption code values of a one-time-use batch as CSV text, with the number of non-empty lines. | `oneTimeUseCodeBatchId` |
+| `create_iap_custom_code` | Create a custom redemption code for an offer code. | `offerCodeId`, `customCode`, `numberOfCodes`, `expirationDate?` |
+| `list_iap_custom_codes` | List the custom redemption codes for an offer code, with redemption counts and expiry dates. | `offerCodeId`, `limit?` |
+
+### Custom Product Pages
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `list_custom_product_pages` | List the custom product pages of an app, optionally filtered by visibility. | `appId`, `visible?`, `limit?` |
+| `get_custom_product_page` | Get one custom product page by ID. | `customProductPageId` |
+| `create_custom_product_page` | Create a custom product page for an app, with its first version and one localization (the app's primary locale unless locale is given). | `appId`, `name`, `locale?`, `promotionalText?`, `deepLink?` |
+| `update_custom_product_page` | Update a custom product page's name or visibility. | `customProductPageId`, `name?`, `visible?` |
+| `delete_custom_product_page` | Delete a custom product page by ID. | `customProductPageId` |
+| `list_cpp_versions` | List the versions of a custom product page, optionally filtered by review state. | `customProductPageId`, `states?`, `limit?` |
+| `create_cpp_version` | Create a new version of a custom product page, optionally with a deep link. | `customProductPageId`, `deepLink?` |
+| `list_cpp_localizations` | List the per-locale localizations of a custom product page version, optionally filtered by locale. | `versionId`, `locales?`, `limit?` |
+| `create_cpp_localization` | Add a locale with promotional text to a custom product page version. | `versionId`, `locale`, `promotionalText?` |
+| `update_cpp_localization` | Set the promotional text of a custom product page localization. | `localizationId`, `promotionalText` |
+| `delete_cpp_localization` | Delete a custom product page localization by ID. | `localizationId` |
+
 ## Usage Examples
 
 ### List Your Apps
@@ -407,13 +638,27 @@ Claude will:
 
 Claude will use `list_app_versions` to show version states (PREPARE_FOR_SUBMISSION, IN_REVIEW, READY_FOR_SALE, etc.)
 
+### Prepare and Submit a Version
+
+> "Set the copyright of MyApp 2.1 to '2026 Example Inc.', attach build 42, add review notes, and submit it for review"
+
+Claude will use `update_app_version`, `set_app_version_build` (only VALID builds attach), `update_review_detail`, then `create_review_submission`, `add_review_submission_item`, and `submit_review_submission`, which refuses if the submission holds anything besides the items you expect.
+
+### Anything Without a Dedicated Tool
+
+> "Turn on Game Center for MyApp's next version"
+
+Claude will use `asc_api_search` to find the operation, `asc_api_describe` to see its body, and `asc_api_request` to call it.
+
 ## Security
 
 ### Credential Handling
 
 - **Private keys** are never logged or exposed in error messages
 - **JWT tokens** are automatically redacted from any error output
-- **Issuer IDs** (UUIDs) are redacted from logs
+- **Issuer ID** is redacted from error messages and details; demo account passwords are never returned and are redacted from errors
+- **Read-only mode** (`ASC_READ_ONLY=1`) blocks writes in the HTTP client itself, not just in the tool list
+- **Generic requests** only reach relative `/v1`-`/v3` paths that match Apple's spec, with `..`, encoded, and absolute paths rejected
 - Token caching minimizes key usage (15-min tokens, refreshed at 10 min)
 
 ### Path Validation
@@ -505,10 +750,15 @@ src/
 ├── auth/
 │   └── jwt.ts        # JWT token generation & caching
 ├── api/
-│   ├── client.ts     # HTTP client with retry logic
+│   ├── client.ts     # HTTP client with retry logic and read-only guard
+│   ├── upload.ts     # Shared asset upload (reserve, upload chunks, commit, poll)
 │   └── types.ts      # TypeScript interfaces
+├── openapi/
+│   ├── schema-index.json  # Operation index generated from spec/openapi.oas.json
+│   └── index.ts           # Match, search, and describe operations
 ├── tools/
-│   ├── index.ts      # Tool registry
+│   ├── index.ts      # Tool registry (toolsets, read-only filtering)
+│   ├── api.tools.ts  # Generic asc_api_* tools
 │   ├── apps.tools.ts
 │   ├── versions.tools.ts
 │   ├── localizations.tools.ts
@@ -519,10 +769,21 @@ src/
 │   ├── devices.tools.ts
 │   ├── users.tools.ts
 │   ├── builds.tools.ts
-│   └── categories.tools.ts
+│   ├── categories.tools.ts
+│   └── ...           # One file per domain (subscriptions, release, media, ...)
 └── utils/
     ├── errors.ts     # Error classes with redaction
     └── validation.ts # Zod schemas
+```
+
+### OpenAPI Spec
+
+`spec/openapi.oas.json` is Apple's App Store Connect OpenAPI spec, pinned (see `spec/README.md`). Tests check every request a tool sends against it.
+
+```bash
+npm run check-openapi   # fail if src/openapi/schema-index.json is stale
+npm run update-openapi  # download Apple's latest spec and regenerate the index
+npx tsx scripts/spec-sheet.ts "PATCH /v1/appInfos/{id}"  # print an operation's resolved shape
 ```
 
 ### Running Locally
@@ -542,6 +803,10 @@ npm start
 3. Make your changes and add tests
 4. Run `npm test` and `npm run lint`
 5. Submit a pull request
+
+## Acknowledgements
+
+The generic API tools, the OpenAPI index format, and several workflow details (review submissions, asset uploads, offer pricing) follow [rorkai/App-Store-Connect-CLI](https://github.com/rorkai/App-Store-Connect-CLI) (MIT).
 
 ## License
 
