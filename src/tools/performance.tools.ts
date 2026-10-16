@@ -257,6 +257,7 @@ export const performanceToolDefinitions = [
     name: "get_app_perf_metrics",
     description:
       "Get performance and power metrics for an app (e.g., launch time, memory, battery, hangs). Returns Xcode-style metrics data with values per device and percentile. Use this for app-level aggregate metrics across all builds.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -287,6 +288,7 @@ export const performanceToolDefinitions = [
     name: "get_build_perf_metrics",
     description:
       "Get performance and power metrics for a specific build. Same metric types as get_app_perf_metrics but scoped to a single build. Useful for comparing performance between builds.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -317,6 +319,7 @@ export const performanceToolDefinitions = [
     name: "list_diagnostic_signatures",
     description:
       "List power and performance diagnostic signatures for a build. Signatures represent recurring performance issues (disk writes, hangs, slow launches) grouped by call stack. Use list_diagnostic_logs with a signature ID to get detailed logs.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -343,6 +346,7 @@ export const performanceToolDefinitions = [
     name: "list_diagnostic_logs",
     description:
       "List diagnostic logs for a specific diagnostic signature. Returns individual log entries for a given performance issue. Use list_diagnostic_signatures first to get a signature ID.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object" as const,
       properties: {

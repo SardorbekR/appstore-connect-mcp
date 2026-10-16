@@ -10,16 +10,55 @@ function getSensitivePatterns(): RegExp[] {
   return [
     /Bearer [A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+/gi, // JWT tokens
     /-----BEGIN.*?-----[\s\S]*?-----END.*?-----/g, // PEM keys
-    /[A-Za-z0-9]{8}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{12}/gi, // UUIDs (issuer IDs)
   ];
 }
 
-function sanitizeMessage(message: string): string {
+/**
+ * Exact secret values to redact. Resource IDs are often UUIDs (builds, review submissions),
+ * so only the configured issuer ID is redacted rather than every UUID.
+ */
+function getSensitiveValues(extra: readonly string[] = []): string[] {
+  const issuerId = process.env.APP_STORE_CONNECT_ISSUER_ID ?? "";
+  // Explicit secrets (e.g. a demo password) are redacted at any length
+  return [
+    ...(issuerId.length >= 4 ? [issuerId] : []),
+    ...extra.filter((value) => value.length > 0),
+  ];
+}
+
+export function sanitizeMessage(message: string, extra: readonly string[] = []): string {
   let sanitized = message;
   for (const pattern of getSensitivePatterns()) {
     sanitized = sanitized.replace(pattern, "[REDACTED]");
   }
+  for (const value of getSensitiveValues(extra)) {
+    sanitized = sanitized.split(value).join("[REDACTED]");
+  }
   return sanitized;
+}
+
+// Server-owned identifiers in Apple error details; never rewritten by redaction
+const STABLE_DETAIL_KEYS = new Set(["code", "status", "id"]);
+
+function sanitizeValue(value: unknown, extra: readonly string[]): unknown {
+  if (typeof value === "string") return sanitizeMessage(value, extra);
+  if (Array.isArray(value)) return value.map((item) => sanitizeValue(item, extra));
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key,
+        STABLE_DETAIL_KEYS.has(key) && typeof item === "string" ? item : sanitizeValue(item, extra),
+      ])
+    );
+  }
+  return value;
+}
+
+function sanitizeDetails(
+  details: ASCErrorDetails[] | undefined,
+  extra: readonly string[] = []
+): ASCErrorDetails[] | undefined {
+  return details ? (sanitizeValue(details, extra) as ASCErrorDetails[]) : undefined;
 }
 
 export interface ASCErrorDetails {
@@ -47,7 +86,7 @@ export class ASCError extends Error {
     this.name = "ASCError";
     this.code = code;
     this.status = status;
-    this.details = details;
+    this.details = sanitizeDetails(details);
   }
 
   toJSON() {
@@ -181,16 +220,31 @@ export function parseAPIError(status: number, body: unknown): ASCError {
 }
 
 /**
- * Format error for MCP tool response
+ * Format error for MCP tool response.
+ * `redact` lists extra secret values from the tool input (e.g. a demo account password)
+ * that must not appear anywhere in the serialized error.
  */
-export function formatErrorResponse(error: unknown): {
+export function formatErrorResponse(
+  error: unknown,
+  redact: readonly string[] = []
+): {
   success: false;
   error: { code: string; message: string; details?: unknown };
 } {
   if (error instanceof ASCError) {
-    return error.toJSON() as {
+    const json = error.toJSON() as {
       success: false;
       error: { code: string; message: string; details?: unknown };
+    };
+    if (!redact.length) return json;
+    // Redact free text only; error codes stay machine-readable even for one-letter secrets
+    return {
+      ...json,
+      error: {
+        ...json.error,
+        message: sanitizeMessage(json.error.message, redact),
+        details: sanitizeValue(json.error.details, redact),
+      },
     };
   }
 
@@ -199,7 +253,7 @@ export function formatErrorResponse(error: unknown): {
       success: false,
       error: {
         code: "INTERNAL_ERROR",
-        message: sanitizeMessage(error.message),
+        message: sanitizeMessage(error.message, redact),
       },
     };
   }

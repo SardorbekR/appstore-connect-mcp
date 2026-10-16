@@ -10,12 +10,13 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprot
 
 import { type AppStoreConnectClient, createClient } from "./api/client.js";
 import { type TokenManager, createTokenManagerFromEnv } from "./auth/jwt.js";
-import { allToolDefinitions, executeTool, hasToolHandler } from "./tools/index.js";
+import { type ServerConfig, TOOLSETS, loadServerConfig } from "./config.js";
+import { type ToolRegistry, createToolRegistry } from "./tools/index.js";
 import { ConfigError, formatErrorResponse } from "./utils/errors.js";
 
 // Server metadata
 const SERVER_NAME = "asc-mcp";
-const SERVER_VERSION = "1.0.0";
+const SERVER_VERSION = "2.0.0";
 
 /**
  * Initialize and run the MCP server
@@ -24,10 +25,14 @@ async function main(): Promise<void> {
   // Initialize token manager and client
   let tokenManager: TokenManager;
   let client: AppStoreConnectClient;
+  let config: ServerConfig;
+  let registry: ToolRegistry;
 
   try {
+    config = loadServerConfig();
     tokenManager = createTokenManagerFromEnv();
-    client = createClient(tokenManager);
+    client = createClient(tokenManager, { readOnly: config.readOnly });
+    registry = createToolRegistry(config);
   } catch (error) {
     if (error instanceof ConfigError) {
       console.error(`Configuration error: ${error.message}`);
@@ -36,6 +41,9 @@ async function main(): Promise<void> {
       console.error("  APP_STORE_CONNECT_ISSUER_ID - Your issuer ID");
       console.error("  APP_STORE_CONNECT_P8_PATH - Path to your .p8 private key file");
       console.error("  or APP_STORE_CONNECT_P8_CONTENT - Content of your .p8 private key");
+      console.error("\nOptional:");
+      console.error(`  ASC_TOOLSETS - Comma-separated subset of: ${TOOLSETS.join(", ")}`);
+      console.error("  ASC_READ_ONLY - Set to 1 to expose only read tools and block writes");
       process.exit(1);
     }
     throw error;
@@ -57,7 +65,7 @@ async function main(): Promise<void> {
   // Handle list tools request
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
-      tools: allToolDefinitions,
+      tools: registry.definitions,
     };
   });
 
@@ -65,7 +73,7 @@ async function main(): Promise<void> {
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
 
-    if (!hasToolHandler(name)) {
+    if (!registry.has(name)) {
       return {
         content: [
           {
@@ -75,7 +83,7 @@ async function main(): Promise<void> {
                 success: false,
                 error: {
                   code: "UNKNOWN_TOOL",
-                  message: `Unknown tool: ${name}`,
+                  message: `Unknown or disabled tool: ${name}`,
                 },
               },
               null,
@@ -88,7 +96,7 @@ async function main(): Promise<void> {
     }
 
     try {
-      const result = await executeTool(client, name, args ?? {});
+      const result = await registry.execute(client, name, args ?? {});
 
       // Check if result indicates an error
       const isError =

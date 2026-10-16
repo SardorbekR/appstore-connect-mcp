@@ -2,18 +2,10 @@
  * Screenshots Tools - Manage app screenshot sets and screenshots
  */
 
-import * as crypto from "node:crypto";
-import * as fs from "node:fs/promises";
 import type { AppStoreConnectClient } from "../api/client.js";
-import type {
-  ASCListResponse,
-  ASCResponse,
-  AppScreenshot,
-  AppScreenshotSet,
-  CreateAppScreenshotRequest,
-  UpdateAppScreenshotRequest,
-} from "../api/types.js";
-import { ASCError, formatErrorResponse } from "../utils/errors.js";
+import type { ASCListResponse, AppScreenshot, AppScreenshotSet } from "../api/types.js";
+import { uploadAsset } from "../api/upload.js";
+import { formatErrorResponse } from "../utils/errors.js";
 import {
   listScreenshotSetsInputSchema,
   listScreenshotsInputSchema,
@@ -109,98 +101,14 @@ export async function uploadScreenshot(
   try {
     const params = validateInput(uploadScreenshotInputSchema, input);
 
-    // Read the file
-    let fileBuffer: Buffer;
-    try {
-      fileBuffer = await fs.readFile(params.filePath);
-    } catch (_error) {
-      throw new ASCError(`Failed to read file: ${params.filePath}`, "FILE_READ_ERROR", 400);
-    }
-
-    // Validate file size matches
-    if (fileBuffer.length !== params.fileSize) {
-      throw new ASCError(
-        `File size mismatch: expected ${params.fileSize}, got ${fileBuffer.length}`,
-        "FILE_SIZE_MISMATCH",
-        400
-      );
-    }
-
-    // Step 1: Reserve the screenshot
-    const reserveRequest: CreateAppScreenshotRequest = {
-      data: {
-        type: "appScreenshots",
-        attributes: {
-          fileName: params.fileName,
-          fileSize: params.fileSize,
-        },
-        relationships: {
-          appScreenshotSet: {
-            data: {
-              type: "appScreenshotSets",
-              id: params.screenshotSetId,
-            },
-          },
-        },
-      },
-    };
-
-    const reserveResponse = await client.post<ASCResponse<AppScreenshot>>(
-      "/appScreenshots",
-      reserveRequest
-    );
-
-    const screenshot = reserveResponse.data;
-    const uploadOperations = screenshot.attributes.uploadOperations;
-
-    if (!uploadOperations?.length) {
-      throw new ASCError("No upload operations provided", "UPLOAD_ERROR", 500);
-    }
-
-    // Step 2: Upload file chunks
-    for (const operation of uploadOperations) {
-      const chunk = fileBuffer.subarray(operation.offset, operation.offset + operation.length);
-
-      const headers: Record<string, string> = {};
-      for (const header of operation.requestHeaders) {
-        headers[header.name] = header.value;
-      }
-
-      const uploadResponse = await client.rawRequest(operation.url, {
-        method: operation.method,
-        headers,
-        body: chunk,
-      });
-
-      if (!uploadResponse.ok) {
-        throw new ASCError(
-          `Chunk upload failed: ${uploadResponse.status}`,
-          "UPLOAD_ERROR",
-          uploadResponse.status
-        );
-      }
-    }
-
-    // Step 3: Commit the upload
-    const checksum = crypto.createHash("md5").update(fileBuffer).digest("base64");
-
-    const commitRequest: UpdateAppScreenshotRequest = {
-      data: {
-        type: "appScreenshots",
-        id: screenshot.id,
-        attributes: {
-          sourceFileChecksum: checksum,
-          uploaded: true,
-        },
-      },
-    };
-
-    const commitResponse = await client.patch<ASCResponse<AppScreenshot>>(
-      `/appScreenshots/${screenshot.id}`,
-      commitRequest
-    );
-
-    const finalScreenshot = commitResponse.data;
+    const finalScreenshot = await uploadAsset(client, {
+      resourceType: "appScreenshots",
+      collectionPath: "/appScreenshots",
+      parent: { name: "appScreenshotSet", type: "appScreenshotSets", id: params.screenshotSetId },
+      filePath: params.filePath,
+      fileName: params.fileName,
+      expectedFileSize: params.fileSize,
+    });
 
     return {
       success: true,
