@@ -372,8 +372,24 @@ export async function updateReviewDetail(
 
     return { success: true, data: formatReviewDetail(response.data) };
   } catch (error) {
-    return formatErrorResponse(error, passwordOf(input));
+    const response = formatErrorResponse(error, passwordOf(input));
+    return isMissingRequiredAttribute(error)
+      ? { ...response, error: { ...response.error, hint: REVIEW_DETAIL_REQUIRED_HINT } }
+      : response;
   }
+}
+
+// Apple checks the whole review detail on update, so a record with empty contact fields rejects
+// a notes-only change (verified live 2026-10-16: 409 asking for contactFirstName).
+const REVIEW_DETAIL_REQUIRED_HINT =
+  "App Store Connect validates the whole review detail on update. Send the missing fields named above (usually contactFirstName, contactLastName, contactPhone, contactEmail) in the same call; get_review_detail shows which are empty.";
+
+function isMissingRequiredAttribute(error: unknown): boolean {
+  return (
+    error instanceof ASCError &&
+    error.status === 409 &&
+    error.message.includes("You must provide a value for the attribute")
+  );
 }
 
 // ============================================================================

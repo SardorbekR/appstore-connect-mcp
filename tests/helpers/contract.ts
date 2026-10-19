@@ -39,6 +39,16 @@ const linkage = (type: string) => ({
  * Each entry cites the evidence; add one only with a source.
  */
 const SPEC_OVERRIDES: Record<string, (schema: Json) => void> = {
+  // The live API clears an app info category slot with `{"data": null}` (verified 2026-10-16 on
+  // a sandbox app: PATCH appInfos primaryCategory data null emptied the slot), but the spec
+  // declares the linkage non-nullable.
+  AppInfoUpdateRequest: (schema) => {
+    for (const relationship of Object.values<Json>(
+      schema.properties.data.properties.relationships.properties
+    )) {
+      relationship.properties.data.nullable = true;
+    }
+  },
   // Live API requires territory (and, for paid modes, subscriptionPricePoint) on inline win-back
   // prices: "Missing subscriptionPricePoint relationship". Source: rorkai/App-Store-Connect-CLI
   // internal/asc/win_back_offers.go (WinBackOfferPriceInlineCreate).

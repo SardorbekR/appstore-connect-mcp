@@ -113,6 +113,28 @@ describe("app info admin tools", () => {
       expectContract(client);
     });
 
+    it("clears a category slot with null", async () => {
+      client.patch.mockResolvedValueOnce(undefined);
+
+      const result = await setAppCategories(asClient(client), {
+        appInfoId: "ai1",
+        secondaryCategoryId: null,
+      });
+
+      expect(client.patch).toHaveBeenCalledWith("/appInfos/ai1", {
+        data: {
+          type: "appInfos",
+          id: "ai1",
+          relationships: { secondaryCategory: { data: null } },
+        },
+      });
+      expect(result).toMatchObject({
+        success: true,
+        data: { updated: { secondaryCategoryId: null } },
+      });
+      expectContract(client);
+    });
+
     it("refuses an update with no category slots", async () => {
       const result = await setAppCategories(asClient(client), { appInfoId: "ai1" });
 
