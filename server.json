@@ -6,12 +6,12 @@
     "url": "https://github.com/SardorbekR/appstore-connect-mcp",
     "source": "github"
   },
-  "version": "2.0.3",
+  "version": "2.0.4",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "asc-mcp",
-      "version": "2.0.3",
+      "version": "2.0.4",
       "transport": {
         "type": "stdio"
       }
