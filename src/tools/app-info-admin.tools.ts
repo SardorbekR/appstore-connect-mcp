@@ -116,13 +116,15 @@ interface EulaResource {
 
 const appInfoIdInputSchema = z.object({ appInfoId: resourceIdSchema });
 
-const categoryIdFields: Record<CategoryInputKey, z.ZodOptional<typeof resourceIdSchema>> = {
-  primaryCategoryId: resourceIdSchema.optional(),
-  primarySubcategoryOneId: resourceIdSchema.optional(),
-  primarySubcategoryTwoId: resourceIdSchema.optional(),
-  secondaryCategoryId: resourceIdSchema.optional(),
-  secondarySubcategoryOneId: resourceIdSchema.optional(),
-  secondarySubcategoryTwoId: resourceIdSchema.optional(),
+// null clears a slot (Apple accepts `data: null` although its spec omits it; verified live 2026-10-16)
+const categoryIdSchema = resourceIdSchema.nullable().optional();
+const categoryIdFields: Record<CategoryInputKey, typeof categoryIdSchema> = {
+  primaryCategoryId: categoryIdSchema,
+  primarySubcategoryOneId: categoryIdSchema,
+  primarySubcategoryTwoId: categoryIdSchema,
+  secondaryCategoryId: categoryIdSchema,
+  secondarySubcategoryOneId: categoryIdSchema,
+  secondarySubcategoryTwoId: categoryIdSchema,
 };
 
 const setAppCategoriesInputSchema = z
@@ -255,8 +257,10 @@ const APP_INFO_LOCALIZATION_ATTRIBUTES = [
   "privacyPolicyText",
 ] as const;
 
-/** The category slots the caller provided, in CATEGORY_SLOTS order. */
-function providedCategorySlots(params: Partial<Record<CategoryInputKey, string | undefined>>) {
+/** The category slots the caller provided (an ID, or null to clear), in CATEGORY_SLOTS order. */
+function providedCategorySlots(
+  params: Partial<Record<CategoryInputKey, string | null | undefined>>
+) {
   return CATEGORY_SLOTS.flatMap((slot) => {
     const id = params[slot.input];
     return id === undefined ? [] : [{ input: slot.input, relationship: slot.relationship, id }];
@@ -332,7 +336,10 @@ export async function setAppCategories(
         type: "appInfos",
         id: params.appInfoId,
         relationships: Object.fromEntries(
-          slots.map((slot) => [slot.relationship, { data: { type: "appCategories", id: slot.id } }])
+          slots.map((slot) => [
+            slot.relationship,
+            { data: slot.id === null ? null : { type: "appCategories", id: slot.id } },
+          ])
         ),
       },
     });
@@ -560,12 +567,18 @@ export async function deleteEula(client: AppStoreConnectClient, input: unknown):
 // ============================================================================
 
 const categoryProperties = {
-  primaryCategoryId: { type: "string", description: "Primary category ID, e.g. GAMES" },
-  primarySubcategoryOneId: { type: "string", description: "Primary subcategory 1 ID" },
-  primarySubcategoryTwoId: { type: "string", description: "Primary subcategory 2 ID" },
-  secondaryCategoryId: { type: "string", description: "Secondary category ID" },
-  secondarySubcategoryOneId: { type: "string", description: "Secondary subcategory 1 ID" },
-  secondarySubcategoryTwoId: { type: "string", description: "Secondary subcategory 2 ID" },
+  primaryCategoryId: { type: ["string", "null"], description: "Primary category ID, e.g. GAMES" },
+  primarySubcategoryOneId: { type: ["string", "null"], description: "Primary subcategory 1 ID" },
+  primarySubcategoryTwoId: { type: ["string", "null"], description: "Primary subcategory 2 ID" },
+  secondaryCategoryId: { type: ["string", "null"], description: "Secondary category ID" },
+  secondarySubcategoryOneId: {
+    type: ["string", "null"],
+    description: "Secondary subcategory 1 ID",
+  },
+  secondarySubcategoryTwoId: {
+    type: ["string", "null"],
+    description: "Secondary subcategory 2 ID",
+  },
 };
 
 const intensityJsonSchema = { type: "string", enum: INTENSITY };
@@ -627,7 +640,7 @@ export const appInfoAdminToolDefinitions = [
   {
     name: "set_app_categories",
     description:
-      "Set one or more App Store categories or subcategories on an app info record. Only the slots provided are changed; at least one is required.",
+      "Set or clear App Store categories and subcategories on an app info record. Only the slots provided are changed (at least one); pass null to clear a slot, e.g. remove the secondary category.",
     annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object" as const,

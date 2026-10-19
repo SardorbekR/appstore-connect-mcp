@@ -72,7 +72,7 @@ Then use `"command": "asc-mcp"` in your client config. A global install does not
 
 - **npx:** restart your MCP client. A running client keeps the version it started with.
 - **Global install:** `npm install -g asc-mcp@latest`, then restart the client.
-- **Pin a version** for stability with `asc-mcp@2.0.3` (or any version) instead of `asc-mcp@latest`.
+- **Pin a version** for stability with `asc-mcp@2.0.4` (or any version) instead of `asc-mcp@latest`.
 
 Once a day the server asks npm for the latest version in the background, without delaying startup. If yours is older, the next time the server starts it tells your assistant, which mentions it to you once. It sends nothing but that request, and installs nothing. Set `ASC_DISABLE_UPDATE_CHECK=1` to turn it off.
 
@@ -403,8 +403,8 @@ One-time purchases via Apple's In-App Purchases v2 API. `create_in_app_purchase`
 | `set_subscription_availability` | Set the territory availability for a subscription. | `subscriptionId`, `availableInNewTerritories`, `territories?` |
 | `create_subscription_price` | Set the price for a subscription in a specific territory. | `subscriptionId`, `subscriptionPricePointId`, `startDate?`, `preserveCurrentPrice?` |
 | `list_promotional_offers` | List all promotional offers configured for a subscription. | `subscriptionId`, `limit?` |
-| `create_promotional_offer` | Create a promotional offer for a subscription. | `subscriptionId`, `name`, `offerCode`, `duration`, `offerMode`, `periodCount?`, `prices?` |
-| `update_promotional_offer` | Update an existing promotional offer's attributes or prices. | `promotionalOfferId`, `name?`, `offerCode?`, `duration?`, `offerMode?`, `periodCount?`, `prices?` |
+| `create_promotional_offer` | Create a promotional offer for a subscription. | `subscriptionId`, `name`, `offerCode`, `duration`, `offerMode`, `periodCount`, `prices?` |
+| `update_promotional_offer` | Replace a promotional offer's per-territory price list. | `promotionalOfferId`, `prices` |
 | `delete_promotional_offer` | Delete a promotional offer from a subscription. | `promotionalOfferId` |
 | `list_promotional_offer_prices` | List the prices set for a promotional offer, with resolved price tier and territory details. | `promotionalOfferId`, `limit?` |
 
@@ -452,7 +452,7 @@ One-time purchases via Apple's In-App Purchases v2 API. `create_in_app_purchase`
 | Tool | Description | Parameters |
 |------|-------------|------------|
 | `get_app_info_categories` | Get the primary and secondary App Store categories and subcategories of an app info record. | `appInfoId` |
-| `set_app_categories` | Set one or more App Store categories or subcategories on an app info record. | `appInfoId`, `primaryCategoryId?`, `primarySubcategoryOneId?`, `primarySubcategoryTwoId?`, `secondaryCategoryId?`, `secondarySubcategoryOneId?`, `secondarySubcategoryTwoId?` |
+| `set_app_categories` | Set or clear App Store categories and subcategories on an app info record. | `appInfoId`, `primaryCategoryId?`, `primarySubcategoryOneId?`, `primarySubcategoryTwoId?`, `secondaryCategoryId?`, `secondarySubcategoryOneId?`, `secondarySubcategoryTwoId?` |
 | `list_app_subcategories` | List the subcategories of an App Store category, for example the subcategories of GAMES. | `categoryId`, `limit?` |
 | `get_age_rating_declaration` | Get the age rating questionnaire answers for an app info record. | `appInfoId` |
 | `update_age_rating_declaration` | Update age rating questionnaire answers. | `declarationId`, `attributes` |
@@ -812,6 +812,7 @@ Releases publish from GitHub Actions (`.github/workflows/publish.yml`) when a ve
 1. Set the new version in `package.json` and `package-lock.json` (`npm version X.Y.Z --no-git-tag-version`), both fields in `server.json`, and `SERVER_VERSION` in `src/index.ts`
 2. Merge to `main`
 3. `git tag vX.Y.Z && git push origin vX.Y.Z`
+4. Approve the run: the publish job waits on the `release` environment until a required reviewer opens the workflow run and clicks **Review deployments → Approve**
 
 The workflow refuses to publish if any version field differs from the tag, or if typecheck, lint, tests, or the OpenAPI index check fail.
 

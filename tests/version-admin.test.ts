@@ -221,6 +221,27 @@ describe("version admin tools", () => {
       expectContract(client);
     });
 
+    it("explains how to fix Apple's missing-contact-field rejection", async () => {
+      const { ASCError } = await import("../src/utils/errors.js");
+      client.patch.mockRejectedValueOnce(
+        new ASCError(
+          "You must provide a value for the attribute 'contactFirstName' with this request",
+          "CONFLICT",
+          409
+        )
+      );
+
+      const result = await updateReviewDetail(asClient(client), {
+        reviewDetailId: "rd1",
+        notes: "New notes",
+      });
+
+      expect(result).toMatchObject({
+        success: false,
+        error: { code: "CONFLICT", hint: expect.stringContaining("contactFirstName") },
+      });
+    });
+
     it("never puts the demo password in an error", async () => {
       const { ASCError } = await import("../src/utils/errors.js");
       client.patch.mockRejectedValueOnce(
